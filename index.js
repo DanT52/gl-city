@@ -459,3 +459,13 @@ function set_uniform_vec3(gl, program, name, value) {
     gl.uniform3fv(location, value);
 }
 
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    projection = perspective(0.25, 0.20, 100); // recalculate projection matrix
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas(); // initial call to set the canvas size
+
