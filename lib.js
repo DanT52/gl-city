@@ -102,6 +102,21 @@ function create_compile_and_link_program( gl, v_shader_src, f_shader_src ) {
 }
 
 /**
+ * Set the built-in shader uniform to texture unit 0.
+ * (this isn't strictly necessary, but would if we wanted to use multi-texturing)
+ * @param {WebGLRenderingContext} gl 
+ */
+function bind_texture_samplers( gl, program, sampler_name ) {
+    const old_prog = gl.getParameter( gl.CURRENT_PROGRAM );
+    gl.useProgram( program );
+
+    const loc = gl.getUniformLocation( program, sampler_name );
+    gl.uniform1i( loc, 0 );
+
+    gl.useProgram( old_prog );
+}
+
+/**
  * 
  * @param {WebGLRenderingContext} gl 
  * @param {WebGLProgram} program 
@@ -177,4 +192,16 @@ function set_render_params( gl ) {
 function set_uniform_matrix4( gl, program, name, data ) {
     const loc = gl.getUniformLocation( program, name );
     gl.uniformMatrix4fv( loc, true, data );
+}
+
+
+function set_uniform_int( gl, program, name, data ) {
+    // let old_prog = gl.getParameter( gl.CURRENT_PROGRAM );
+    // gl.useProgram( program );
+
+    const loc = gl.getUniformLocation( program, name );
+
+    gl.uniform1i( loc, data );
+
+    // gl.useProgram( old_prog );
 }

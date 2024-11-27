@@ -32,6 +32,7 @@ uniform float L;
 
 //ins and outs
 in vec3 coordinates;
+in vec4 color;
 in vec2 uv;
 in vec3 normal;
 
@@ -91,7 +92,7 @@ void main(void) {
     vec4 point_light_color = (point_diffuse_color + point_specular_color) * attenuation;
 
 
-    v_color = ambient_color + diffuse_color + specular_color + point_light_color;
+    v_color = (0.0 * color )+( ambient_color + diffuse_color + specular_color + point_light_color );
 }`;
 
 
@@ -118,71 +119,6 @@ gl.useProgram(shaderProgram);
 
 // my clear color
 gl.clearColor(0.3, 0.55, 0.6, 1.0);
-
-// create xor texture
-function xor_texture() {
-    let width = 256;
-    let data = new Array(width * width * 4); // 4 because there are 4 bytes per pixel: R, G, B, and A
-
-    for (let row = 0; row < width; row++) {
-        for (let col = 0; col < width; col++) {
-            let pix = (row * width + col) * 4;
-            let brightness = row ^ col;
-            data[pix] = data[pix + 1] = data[pix + 2] = brightness;
-            data[pix + 3] = 255; // alpha always max (fully opaque)
-        }
-    }
-
-    return new Uint8Array(data);
-}
-
-// create and bind the texture
-let tex = gl.createTexture();
-gl.bindTexture(gl.TEXTURE_2D, tex);
-
-// load xor texture
-gl.texImage2D(
-    gl.TEXTURE_2D, 0, gl.RGBA,
-    256, 256, 0,
-    gl.RGBA, gl.UNSIGNED_BYTE,
-    xor_texture()
-);
-
-// parameters
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-
-
-// create image object
-let image = new Image();
-
-function on_load() {
-    
-    // bind
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-
-    // load the image pixels into the texture
-    gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA,
-        gl.RGBA, gl.UNSIGNED_BYTE,
-        image
-    );
-
-    // generate mipmaps
-    gl.generateMipmap(gl.TEXTURE_2D);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-}
-
-// set the callback
-image.onload = on_load;
-
-// start loading the image
-image.src = '../texture/metal_scale.png';
-
 
 // calculate FOV stuff function
 function perspective(fovX, near, far) {
@@ -223,13 +159,11 @@ let ROTATE_PER_FRAME = ROTATE_SPEED / DESIRED_TICK_RATE;
 
 let keys = Keys.start_listening();
 
-let initialCamPosition = new Vec4(0, 0, -1.5, 0);
+let initialCamPosition = new Vec4(0, 0, -4, 0);
 let cam = new Camera(initialCamPosition, 0, 0, 0, );
 
-
-// bind texture sampler
-const sampler_loc = gl.getUniformLocation(shaderProgram, 'tex_0');
-gl.uniform1i(sampler_loc, 0);
+// Create LitMaterial instance
+let material = new LitMaterial(gl, '../texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
 
 // Set material properties
 const mat_ambient = 0.25;
@@ -238,7 +172,7 @@ const mat_specular = 2.0;
 const mat_shininess = 4.0;
 
 // Set light properties
-const sun_dir = [1.0, 1.0, 1.0];
+const sun_dir = [1.0, 1, 0];
 const sun_color = [1.0, 1.0, 1.0];
 
 // set point light properties
@@ -250,14 +184,9 @@ const point_light_color = [1.0, 0.0, 0.0]; // red tint
 const L = 1.5;
 
 
-// Set uniforms
-set_uniform_scalar(gl, shaderProgram, 'mat_ambient', mat_ambient);
-set_uniform_scalar(gl, shaderProgram, 'mat_diffuse', mat_diffuse);
-set_uniform_scalar(gl, shaderProgram, 'mat_specular', mat_specular);
-set_uniform_scalar(gl, shaderProgram, 'mat_shininess', mat_shininess);
 set_uniform_vec3(gl, shaderProgram, 'sun_dir', sun_dir);
 set_uniform_vec3(gl, shaderProgram, 'sun_color', sun_color);
-set_uniform_vec3(gl, shaderProgram, 'cam_pos', [0,0,-1.5]);
+set_uniform_vec3(gl, shaderProgram, 'cam_pos', [0,0,-4]);
 
 // Set point light uniforms
 set_uniform_vec3(gl, shaderProgram, 'point_light_pos', point_light_pos);
@@ -266,72 +195,10 @@ set_uniform_vec3(gl, shaderProgram, 'point_light_color', point_light_color);
 set_uniform_scalar(gl, shaderProgram, 'L', L);
 
 
-function make_uv_sphere(gl, program, subdivs, material) {
-    let verts = [];
-    let indis = [];
-    const TAU = 2 * Math.PI;
+// create the sphere using NormalMesh
+let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, material);
+let plane = NormalMesh.platform( gl, shaderProgram, 20, 20, 1, 20, material );
 
-    for (let layer = 0; layer <= subdivs; layer++) {
-
-        let y_turns = layer / subdivs / 2;
-        let y = Math.cos(y_turns * TAU) / 2
-
-        for (let subdiv = 0; subdiv <= subdivs; subdiv++) {
-
-            let turns = subdiv / subdivs
-            let rads = turns * TAU
-
-            let radius_scale = Math.sin(2 * Math.PI * y_turns)
-            let x = Math.cos( rads ) / 2 * radius_scale;
-            let z = Math.sin(rads) / 2 * radius_scale;
-            let normal = new Vec4(x, y, z, 0).norm();
-
-            verts.push(x, y, z);                       //pos
-            verts.push(1, 1, 1, 1);                    // color
-            verts.push(turns, y_turns * 2);            //UVs
-            verts.push(normal.x, normal.y, normal.z); // normals
-
-            // push indis
-            let first = (layer * (subdivs + 1)) + subdiv;
-            let second = first + subdivs + 1;
-            indis.push(first, second, first + 1);
-            indis.push(second, second + 1, first + 1);
-        }
-    }
-
-    // vert andindex buff
-    let vertBuff = create_and_load_vertex_buffer(gl, verts, gl.STATIC_DRAW);
-    let indexBuff = create_and_load_elements_buffer(gl, indis, gl.STATIC_DRAW);
-    return { vertBuff, indexBuff, numIndices: indis.length };
-}
-
-
-// create the sphere
-let sphere = make_uv_sphere(gl, shaderProgram, 16);
-
-function render_sphere(gl) {
-    gl.cullFace(gl.BACK);
-    gl.enable(gl.CULL_FACE);
-    gl.useProgram(shaderProgram);
-
-    // bind and set buffers
-    gl.bindBuffer(gl.ARRAY_BUFFER, sphere.vertBuff);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphere.indexBuff);
-
-    let stride = 48; // each vertex has 12 floats (3+4+2+3), each float is 4 bytes
-
-    // use set_vertex_attrib_to_buffer function
-    set_vertex_attrib_to_buffer(gl, shaderProgram, "coordinates", sphere.vertBuff, 3, gl.FLOAT, false, stride, 0);
-    // we dont use color this time
-    //set_vertex_attrib_to_buffer(gl, shaderProgram, "color", sphere.vertBuff, 4, gl.FLOAT, false, stride, 12);
-    set_vertex_attrib_to_buffer(gl, shaderProgram, "uv", sphere.vertBuff, 2, gl.FLOAT, false, stride, 28);
-    set_vertex_attrib_to_buffer(gl, shaderProgram, "normal", sphere.vertBuff, 3, gl.FLOAT, false, stride, 36);
-
-    
-    // Bind the texture
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.drawElements(gl.TRIANGLES, sphere.numIndices, gl.UNSIGNED_SHORT, 0);
-}
 
 // rendering loop
 function render(currentTime) {
@@ -349,7 +216,9 @@ function render(currentTime) {
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
-    render_sphere(gl);
+    //render_sphere(gl);
+    plane.render( gl );
+    sphere.render( gl );
     updateCameraInfo();
 
     // next frame
@@ -425,7 +294,7 @@ document.addEventListener('mousemove', (event) => {
 
 // reset the camera to initial state
 document.getElementById('reset-camera').addEventListener('click', () => {
-    cam.pos = new Vec4(0, 0, -1.5, 0);
+    cam.pos = initialCamPosition;
     cam.yaw = 0;
     cam.pitch = 0;
     cam.roll = 0;
