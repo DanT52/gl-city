@@ -10,6 +10,7 @@ precision mediump float;
 // set uniforms
 uniform mat4 model;
 uniform mat4 view;
+uniform vec3 cam_pos;
 
 //mat info
 uniform float mat_ambient;
@@ -20,7 +21,7 @@ uniform float mat_shininess;
 //directional light
 uniform vec3 sun_dir;
 uniform vec3 sun_color;
-uniform vec3 cam_pos;
+
 
 //point light
 uniform vec3 point_light_pos;
@@ -39,6 +40,29 @@ in vec3 normal;
 out vec4 v_color;
 out vec2 v_uv;
 
+vec3 spec_color( 
+    vec3 normal, 
+    vec3 light_dir,
+    vec3 eye_dir, 
+    vec3 light_color, 
+    float mat_specular,
+    float mat_shiniess
+) {
+    float cos_light_surf_normal = dot( normal, light_dir );
+
+    if( cos_light_surf_normal <= 0.0 ) {
+        return vec3( 0.0, 0.0, 0.0 );
+    }
+
+    vec3 light_reflection = 
+        2.0 * cos_light_surf_normal * normal - light_dir;
+
+    return 
+        pow( 
+            max( dot( light_reflection, normalize( eye_dir ) ), 0.0  ),
+            mat_shininess 
+        ) * light_color * mat_specular;
+}
 
 void main(void) {
     gl_Position = view * model * vec4(coordinates, 1.0);
@@ -59,9 +83,16 @@ void main(void) {
     vec4 diffuse_color = vec4(mat_diffuse * sun_color * diff, 1.0);
 
     // Specular
+
+    // if i wanna do it with the function
+    // vec3 spec = spec_color(normal_tx, light_dir, view_dir, sun_color, mat_specular, mat_shininess );
+    // vec4 specular_color = vec4(spec, 1.0);
+
     vec3 R = 2.0 * dot(light_dir, normal_tx) * normal_tx - light_dir;
     float spec = pow(max(dot(view_dir, R), 0.0), mat_shininess);
     vec4 specular_color = vec4(mat_specular * sun_color * spec, 1.0);
+
+
 
 
 
@@ -163,7 +194,8 @@ let initialCamPosition = new Vec4(0, 0, -4, 0);
 let cam = new Camera(initialCamPosition, 0, 0, 0, );
 
 // Create LitMaterial instance
-let material = new LitMaterial(gl, '../texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
+let material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
+let material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.25, .5, 0, .2 );
 
 // Set material properties
 const mat_ambient = 0.25;
@@ -197,7 +229,13 @@ set_uniform_scalar(gl, shaderProgram, 'L', L);
 
 // create the sphere using NormalMesh
 let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, material);
-let plane = NormalMesh.platform( gl, shaderProgram, 20, 20, 1, 20, material );
+let plane = NormalMesh.platform( gl, shaderProgram, 20, 20, 1, 4, material2 );
+console.log(plane)
+let cow = null;
+NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, material2, (loadedMesh) => {
+    cow = loadedMesh;
+    console.log(cow)
+});
 
 
 // rendering loop
@@ -217,8 +255,11 @@ function render(currentTime) {
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
     //render_sphere(gl);
-    plane.render( gl );
-    sphere.render( gl );
+    //plane.render( gl );
+    //sphere.render( gl );
+    if (cow) {
+        cow.render(gl);
+    }
     updateCameraInfo();
 
     // next frame
