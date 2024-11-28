@@ -19,6 +19,7 @@ class Scene {
         cowNode.position = new Vec4(0, 4, 0, 1)
         cowNode.scale = new Vec4(.5, .5, .5, .5)
         cowNode.roll = -.25
+        
 
 
         NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, this.material, (loadedMesh) => {

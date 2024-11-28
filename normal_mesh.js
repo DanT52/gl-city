@@ -275,7 +275,7 @@ class NormalMesh {
                 let point_norm = new Vec4(x, y, z, 0.0).norm();
                 let scaled_point = point_norm.scaled(radius);
 
-                verts.push(scaled_point.x, scaled_point.y, scaled_point.z);
+                verts.push(scaled_point.x, scaled_point.y, scaled_point.z); // positions
                 verts.push(1, 1, 1, 1); // color
                 verts.push(turns, y_turns * 2); // UVs
                 verts.push(point_norm.x, point_norm.y, point_norm.z); // normals
@@ -308,62 +308,78 @@ class NormalMesh {
  * @param {string} text
  * @returns {NormalMesh}
  */
-static from_obj_text(gl, program, text, material) {
-    let lines = text.split(/\r?\n/);
-
-    let coords = []; // x, y, z, r, g, b, a per vertex
-    let elements = []; // indices
-
-    let positions = []; // x, y, z per vertex
-
-    let y_min = Infinity;
-    let y_max = -Infinity;
-
-    for (let line of lines) {
-        line = line.trim();
-
-        if (line.startsWith('#') || line === '') {
-            continue;
-        }
-
-        let parts = line.split(/\s+/);
-
-        if (parts[0] === 'v') {
-            // vertex line v x y z
-            let x = parseFloat(parts[1]);
-            let y = parseFloat(parts[2]);
-            let z = parseFloat(parts[3]);
-
-            positions.push([x, y, z]);
-            // update y_min and y_max for color scaling
-            if (y < y_min) y_min = y;
-            if (y > y_max) y_max = y;
-
-        } else if (parts[0] === 'f') {
-            // Face line f v1 v2 v3 ...
-            let v1 = parseInt(parts[1], 10) -1
-            let v2 = parseInt(parts[2], 10) -1
-            let v3 = parseInt(parts[3], 10) -1
-            elements.push(v1, v2, v3)
+    static from_obj_text(gl, program, text, material) {
+        let lines = text.split(/\r?\n/);
+    
+        let coords = []; // x, y, z, r, g, b, a per vertex
+        let normal = [];
+        let elements = []; // indices
+    
+        let positions = []; // x, y, z per vertex
+    
+        let y_min = Infinity;
+        let y_max = -Infinity;
+    
+        for (let line of lines) {
+            line = line.trim();
+    
+            if (line.startsWith('#') || line === '') {
+                continue;
+            }
+    
+            let parts = line.split(/\s+/);
+    
+            if (parts[0] === 'v') {
+                // vertex line v x y z
+                let x = parseFloat(parts[1]);
+                let y = parseFloat(parts[2]);
+                let z = parseFloat(parts[3]);
+    
+                positions.push([x, y, z]);
+                // update y_min and y_max for color scaling
+                if (y < y_min) y_min = y;
+                if (y > y_max) y_max = y;
+    
+            } else if (parts[0] === 'f') {
+                // Face line f v1 v2 v3 ...
+                let v1 = parseInt(parts[1], 10) -1
+                let v2 = parseInt(parts[2], 10) -1
+                let v3 = parseInt(parts[3], 10) -1
+                elements.push(v1, v2, v3)
+            }
+    
+            
         }
 
         
+    
+        // create the vertex array, including colors
+        for (let i = 0; i < positions.length; i++) {
+            let [x, y, z] = positions[i];
+            
+            console.log(normal[i])
+            
+            let pos_vec = new Vec4(x, y, z, 0.0);
+            let pos_norm;
+
+            if (pos_vec.length() === 0) {
+                // Assign a default normal if the vector length is zero
+                pos_norm = new Vec4(0.0, 1.0, 0.0, 0.0); // Example default normal pointing up
+            } else {
+                pos_norm = pos_vec.norm();
+            }
+            
+            // Vary color based on the y-value
+            let t = (y - y_min) / (y_max - y_min);
+            coords.push(x, y, z, 1, 0, 1, 1, pos_norm.x, pos_norm.y, pos_norm.x, pos_norm.y, pos_norm.z );
+        }
+        // create and return the Mesh object
+        return new NormalMesh( gl, program, coords, elements, material, true );
+    
     }
-
-    // create the vertex array, including colors
-    for (let i = 0; i < positions.length; i++) {
-        let [x, y, z] = positions[i];
-
-        let pos_norm = new Vec4(x, y, z, 0.0).norm()
-        
-        // Vary color based on the y-value
-        let t = (y - y_min) / (y_max - y_min);
-        coords.push(x, y, z, 1, 0, 1, 1, pos_norm.x, pos_norm.y, pos_norm.z, 0, 1);
-    }
-    // create and return the Mesh object
-    return new NormalMesh( gl, program, coords, elements, material, true );
-
-}
+    
+    
+    
 
     /**
      * Asynchronously load the obj file as a mesh.

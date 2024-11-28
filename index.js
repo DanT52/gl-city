@@ -3,6 +3,9 @@
 let canvas = document.getElementById('glcanvas');
 let gl = canvas.getContext('webgl2');
 
+const MAX_DIR_LIGHTS = 4;
+const MAX_POINT_LIGHTS = 8;
+
 // i do the lighting stuff in the vertex source
 let vertex_source = 
 `#version 300 es
@@ -20,18 +23,26 @@ uniform float mat_diffuse;
 uniform float mat_specular;
 uniform float mat_shininess;
 
-//directional light
-uniform vec3 sun_dir;
-uniform vec3 sun_color;
+// Directional lights
+#define MAX_DIR_LIGHTS 4
+struct DirectionalLight {
+    vec3 direction;
+    vec3 color;
+};
+uniform DirectionalLight dir_lights[MAX_DIR_LIGHTS];
+uniform int num_dir_lights;
 
-//point light
-uniform vec3 point_light_pos;
-uniform vec3 point_light_color;
+// Point lights
+#define MAX_POINT_LIGHTS 8
+struct PointLight {
+    vec3 position;
+    vec3 color;
+    float attenuation;
+};
+uniform PointLight point_lights[MAX_POINT_LIGHTS];
+uniform int num_point_lights;
 
-// attenuation constant
-uniform float L;
-
-//ins and outs
+// ins and outs
 in vec3 coordinates;
 in vec4 color;
 in vec2 uv;
@@ -55,15 +66,15 @@ vec4 calculateSpecular(vec3 normal, vec3 light_dir, vec3 view_dir, vec3 light_co
     return vec4(mat_specular * light_color * spec, 1.0);
 }
 
-vec4 calculatePointLight(vec3 coords_tx, vec3 normal, vec3 view_dir, vec3 light_pos, vec3 light_color, float mat_diffuse, float mat_specular, float mat_shininess, float attenuation_constant) {
-    vec3 point_light_dir = normalize(light_pos - coords_tx);
+vec4 calculatePointLight(vec3 coords_tx, vec3 normal, vec3 view_dir, PointLight light, float mat_diffuse, float mat_specular, float mat_shininess) {
+    vec3 point_light_dir = normalize(light.position - coords_tx);
     float point_diff = max(dot(normal, point_light_dir), 0.0);
-    vec4 point_diffuse_color = calculateDiffuse(normal, point_light_dir, light_color, mat_diffuse);
+    vec4 point_diffuse_color = calculateDiffuse(normal, point_light_dir, light.color, mat_diffuse);
 
-    vec4 point_specular_color = calculateSpecular(normal, point_light_dir, view_dir, light_color, mat_specular, mat_shininess);
+    vec4 point_specular_color = calculateSpecular(normal, point_light_dir, view_dir, light.color, mat_specular, mat_shininess);
 
-    float d = length(light_pos - coords_tx);
-    float attenuation = 1.0 / (attenuation_constant * d);
+    float d = length(light.position - coords_tx);
+    float attenuation = 1.0 / (light.attenuation * d);
 
     return (point_diffuse_color + point_specular_color) * attenuation;
 }
@@ -72,40 +83,31 @@ void main(void) {
     gl_Position = projection * view * model * vec4(coordinates, 1.0);
     v_uv = uv;
 
-    vec3 light_dir = normalize(sun_dir);
     vec3 coords_tx = (model * vec4(coordinates, 1.0)).xyz;
     vec3 view_dir = normalize(cam_pos - coords_tx);
     vec3 normal_tx = normalize(mat3(model) * normal);
 
-    // Directional light calculations
+    // Ambient
     vec4 ambient_color = calculateAmbient(mat_ambient);
-    vec4 diffuse_color = calculateDiffuse(normal_tx, light_dir, sun_color, mat_diffuse);
-    vec4 specular_color = calculateSpecular(normal_tx, light_dir, view_dir, sun_color, mat_specular, mat_shininess);
 
-    // Handle back-facing lighting for directional light
-    float NdotL = dot(light_dir, normal_tx);
-    if (NdotL <= 0.0) {
-        specular_color = vec4(0.0);
+    // Directional light calculations
+    vec4 dir_light_color = vec4(0.0);
+    for (int i = 0; i < num_dir_lights; i++) {
+        vec3 light_dir = normalize(dir_lights[i].direction);
+        dir_light_color += calculateDiffuse(normal_tx, light_dir, dir_lights[i].color, mat_diffuse) +
+                           calculateSpecular(normal_tx, light_dir, view_dir, dir_lights[i].color, mat_specular, mat_shininess);
     }
 
     // Point light calculations
-    vec4 point_light_color = calculatePointLight(
-        coords_tx,
-        normal_tx,
-        view_dir,
-        point_light_pos,
-        point_light_color,
-        mat_diffuse,
-        mat_specular,
-        mat_shininess,
-        L
-    );
+    vec4 point_light_color = vec4(0.0);
+    for (int i = 0; i < num_point_lights; i++) {
+        point_light_color += calculatePointLight(coords_tx, normal_tx, view_dir, point_lights[i], mat_diffuse, mat_specular, mat_shininess);
+    }
 
     // Combine all lighting
-    v_color = (0.0* color) + ambient_color + diffuse_color + specular_color + point_light_color;
+    v_color = (color * 0.0) + ambient_color + dir_light_color + point_light_color;
 }
 `;
-
 
 let fragment_source = 
 `#version 300 es
@@ -179,27 +181,51 @@ const mat_diffuse = 1.0;
 const mat_specular = 2.0;
 const mat_shininess = 4.0;
 
-// Set light properties
-const sun_dir = [1.0, 1, 0];
-const sun_color = [1.0, 1.0, 1.0];
+let dirLights = [];
+let pointLights = [];
 
-// set point light properties
-const point_light_pos = [1, -1.0, -1.0];
-const point_light_color = [1.0, 0.0, 1.0]; // red tint
+// Push a directional light
+function addDirectionalLight(direction, color) {
+    if (dirLights.length >= MAX_DIR_LIGHTS) {
+        console.warn("Max directional lights reached.");
+        return;
+    }
+    dirLights.push({ direction, color });
+}
 
-// constant for the attenuation
-const L = 1.5;
+// Push a point light
+function addPointLight(position, color, attenuation) {
+    if (pointLights.length >= MAX_POINT_LIGHTS) {
+        console.warn("Max point lights reached.");
+        return;
+    }
+    pointLights.push({ position, color, attenuation });
+}
 
-set_uniform_vec3(gl, shaderProgram, 'sun_dir', sun_dir);
-set_uniform_vec3(gl, shaderProgram, 'sun_color', sun_color);
-set_uniform_vec3(gl, shaderProgram, 'cam_pos', [initialCamPosition.x, initialCamPosition.y, initialCamPosition.z]);
+// Update shader uniforms for lights
+function updateLightUniforms(gl, program) {
+    gl.uniform1i(gl.getUniformLocation(program, "num_dir_lights"), dirLights.length);
+    dirLights.forEach((light, index) => {
+        set_uniform_vec3(gl, program, `dir_lights[${index}].direction`, light.direction);
+        set_uniform_vec3(gl, program, `dir_lights[${index}].color`, light.color);
+    });
 
-// Set point light uniforms
-set_uniform_vec3(gl, shaderProgram, 'point_light_pos', point_light_pos);
-set_uniform_vec3(gl, shaderProgram, 'point_light_color', point_light_color);
+    gl.uniform1i(gl.getUniformLocation(program, "num_point_lights"), pointLights.length);
+    pointLights.forEach((light, index) => {
+        set_uniform_vec3(gl, program, `point_lights[${index}].position`, light.position);
+        set_uniform_vec3(gl, program, `point_lights[${index}].color`, light.color);
+        set_uniform_scalar(gl, program, `point_lights[${index}].attenuation`, light.attenuation);
+    });
+}
 
-set_uniform_scalar(gl, shaderProgram, 'L', L);
+// Example: Adding lights
+addDirectionalLight([1.0, -1.0, 0.0], [1.0, 1.0, 1.0]); // Sunlight
+addDirectionalLight([1.0, 1.0, 0.0], [0.0, 1.0, 1.0]); // Sunlight
+//addPointLight([0.0, 2.0, -2.0], [1.0, 0.0, 0.0], 1.5);    // Red point light
+//addPointLight([2.0, 1.0, 1.0], [0.0, 1.0, 0.0], 1.0);    // Green point light
 
+// Update the uniforms before rendering
+updateLightUniforms(gl, shaderProgram);
 // create the scene
 let scene = new Scene(gl, shaderProgram);
 

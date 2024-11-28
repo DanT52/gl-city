@@ -74,6 +74,20 @@ class Vec4 {
 
         return new Vec4( x, y, z, 0 );
     }
+    /**
+     * Calculate the normal of the given triangle. 
+     * For the resulting normal to point in the positive y direction, p0 to p1 should be to the 
+     * left of p0 to p2
+     * @param {Vec4} p0 
+     * @param {Vec4} p1 
+     * @param {Vec4} p2 
+     * @returns Vec4
+     */
+    static normal_of_triangle( p0, p1, p2 ) {
+        let v0 = p1.sub( p0 );
+        let v1 = p2.sub( p0 );
+        return v0.cross( v1 );
+    }
 	
 	toString() {
 		return [ '[', this.x, this.y, this.z, this.w, ']' ].join( ' ' );
