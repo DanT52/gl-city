@@ -1,56 +1,65 @@
-class Node {
-    constructor(data = null) {
-        this.position = new Vec4(0, 0, 0, 1);
-        this.scale = new Vec4(1, 1, 1, 1);
-        this.roll = 0;
-        this.pitch = 0;
-        this.yaw = 0;
-        this.data = data;
-        this.children = [];
+class Scene {
+    constructor(gl, shaderProgram) {
+        this.gl = gl;
+        this.shaderProgram = shaderProgram;
+
+        // Create LitMaterial instances
+        this.material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
+        this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.25, 0.5, 0, 0.2);
+
+        // Create base elements
+        this.sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
+        this.plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
+
+        this.scene = new Node(this.plane);
+
+        // Add city to the scene
+        const city = this.createCity(
+            gl,
+            shaderProgram,
+            12, // Width of the city
+            12, // Depth of the city
+            5,  // Number of rows
+            5,  // Number of columns
+            3,  // Minimum building height
+            6,  // Maximum building height
+            this.material2 // Material for buildings
+        );
+        city.position = new Vec4(0, 0, 0, 1); // Center the city on the plane
+        this.scene.children.push(city);
     }
 
-    addChild(data = null) {
-        const child = new Node(data);
-        this.children.push(child);
-        return child;
-    }
+    createCity(gl, shaderProgram, width, depth, rows, cols, minHeight, maxHeight, material) {
+        const cityNode = new Node();
 
-    getMatrix() {
-        let matrix = new Mat4();
-        
-        matrix = matrix.mul(Mat4.translation(this.position.x, this.position.y, this.position.z ));
-        matrix = matrix.mul(Mat4.rotation_xz(this.yaw));
-        matrix = matrix.mul(Mat4.rotation_yz(this.pitch));
-        matrix = matrix.mul(Mat4.rotation_xy(this.roll));
-        matrix = matrix.mul(Mat4.scale(this.scale.x, this.scale.y, this.scale.z));
-        
-        return matrix;
-    }
+        // Calculate spacing based on the city dimensions and number of buildings
+        const spacingX = width / (cols - 1);
+        const spacingZ = depth / (rows - 1);
 
-    generateRenderJobs(parentMatrix, jobs) {
-        const matrix = parentMatrix.mul(this.getMatrix());
-        if (this.data) {
-            jobs.push(new RenderMesh(matrix, this.data));
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const buildingWidth = 1.5;
+
+                // Randomize the height between minHeight and maxHeight
+                const height = Math.random() * (maxHeight - minHeight) + minHeight;
+
+                // Create the building
+                const building = NormalMesh.box(gl, shaderProgram, buildingWidth, height, buildingWidth, material);
+                const buildingNode = cityNode.addChild(building);
+
+                // Position the building evenly spaced across the city area
+                buildingNode.position = new Vec4(
+                    col * spacingX - width / 2, // Center the city on the plane
+                    height / 2,               // Center the building vertically
+                    row * spacingZ - depth / 2, // Center the city on the plane
+                    1
+                );
+            }
         }
-        for (const child of this.children) {
-            child.generateRenderJobs(matrix, jobs);
-        }
+        return cityNode;
     }
 
-    render(gl, shaderProgram) {
-        const jobs = [];
-        this.generateRenderJobs(new Mat4(), jobs);
-        for (const job of jobs) {
-            
-            set_uniform_matrix4(gl, shaderProgram, 'model', job.matrix.data);
-            job.mesh.render(gl);
-        }
-    }
-}
-
-class RenderMesh {
-    constructor(matrix, mesh) {
-        this.matrix = matrix;
-        this.mesh = mesh;
+    render() {
+        this.scene.render(this.gl, this.shaderProgram);
     }
 }

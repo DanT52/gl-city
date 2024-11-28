@@ -1,4 +1,5 @@
-// index.js
+
+
 let canvas = document.getElementById('glcanvas');
 let gl = canvas.getContext('webgl2');
 
@@ -150,7 +151,7 @@ set_render_params( gl );
 gl.useProgram(shaderProgram);
 
 // my clear color
-gl.clearColor(0.3, 0.55, 0.6, 1.0);
+gl.clearColor(0.1, 0.2, 0.3, 1.0);
 
 // calculate FOV stuff function
 function perspective(fovX, near, far) {
@@ -184,19 +185,15 @@ let previousTime = 0;
 let DESIRED_TICK_RATE = 60;
 let DESIRED_MSPT = 1000 / 60;
 let MOVE_SPEED = 5;
-let ROTATE_SPEED = .125;
+let ROTATE_SPEED = .4;
 
 let MOVE_PER_FRAME = MOVE_SPEED / DESIRED_TICK_RATE;
 let ROTATE_PER_FRAME = ROTATE_SPEED / DESIRED_TICK_RATE;
 
 let keys = Keys.start_listening();
 
-let initialCamPosition = new Vec4(0, 0, -4, 0);
+let initialCamPosition = new Vec4(0, 5, -10, 0);
 let cam = new Camera(initialCamPosition, 0, 0, 0, );
-
-// Create LitMaterial instance
-let material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
-let material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.25, .5, 0, .2 );
 
 // Set material properties
 const mat_ambient = 0.25;
@@ -209,17 +206,15 @@ const sun_dir = [1.0, 1, 0];
 const sun_color = [1.0, 1.0, 1.0];
 
 // set point light properties
-const point_light_pos = [-1.0, -1.0, -1.0];
-const point_light_color = [1.0, 0.0, 0.0]; // red tint
-
+const point_light_pos = [1, -1.0, -1.0];
+const point_light_color = [1.0, 0.0, 1.0]; // red tint
 
 // constant for the attenuation
 const L = 1.5;
 
-
 set_uniform_vec3(gl, shaderProgram, 'sun_dir', sun_dir);
 set_uniform_vec3(gl, shaderProgram, 'sun_color', sun_color);
-set_uniform_vec3(gl, shaderProgram, 'cam_pos', [0,0,-4]);
+set_uniform_vec3(gl, shaderProgram, 'cam_pos', [initialCamPosition.x, initialCamPosition.y, initialCamPosition.z]);
 
 // Set point light uniforms
 set_uniform_vec3(gl, shaderProgram, 'point_light_pos', point_light_pos);
@@ -227,29 +222,8 @@ set_uniform_vec3(gl, shaderProgram, 'point_light_color', point_light_color);
 
 set_uniform_scalar(gl, shaderProgram, 'L', L);
 
-
-// create the sphere using NormalMesh
-let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, material);
-let plane = NormalMesh.platform( gl, shaderProgram, 20, 20, 1, 4, material2 );
-console.log(plane)
-let cow = null;
-let cowNode = new Node()
-cowNode.position = new Vec4(20, 50, -100, 1)
-
-NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, material2, (loadedMesh) => {
-    cow = loadedMesh;
-    cowNode.data = cow
-    console.log(cow)
-});
-
-let scene = new Node(plane);
-scene.position = new Vec4(0, 0, 0, 1);
-let sphereNode = scene.addChild(sphere)
-sphereNode.position = new Vec4(0, 1, -1, 1);
-
-// scene.children.push(cowNode)
-
-
+// create the scene
+let scene = new Scene(gl, shaderProgram);
 
 // rendering loop
 function render(currentTime) {
@@ -268,13 +242,7 @@ function render(currentTime) {
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
-
-    // plane.render( gl );
-    // sphere.render( gl );
-    // if (cow) {
-    //     cow.render(gl);
-    // }
-    scene.render(gl, shaderProgram);
+    scene.render();
 
     updateCameraInfo();
 
