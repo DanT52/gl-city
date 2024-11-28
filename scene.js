@@ -8,12 +8,30 @@ class Scene {
         this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.25, 0.5, 0, 0.2);
 
         // Create base elements
-        this.sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        this.plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
+        let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
+        this.scene = new Node(plane);
+        this.testScene()
+    }
 
-        this.scene = new Node(this.plane);
+    testScene() {
+        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
+        let cowNode = new Node()
+        cowNode.position = new Vec4(0, 4, 0, 1)
+        cowNode.scale = new Vec4(.5, .5, .5, .5)
+        cowNode.roll = -.25
 
-        // Add city to the scene
+
+        NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, this.material, (loadedMesh) => {
+            cowNode.data = loadedMesh
+        });
+        this.scene.children.push(cowNode);
+        const sphereNode = this.scene.addChild(sphere)
+        sphereNode.position = new Vec4(0, 1, 0, 1)
+
+
+    }
+
+    mainScene() {
         const city = this.createCity(
             gl,
             shaderProgram,
@@ -24,8 +42,9 @@ class Scene {
             3,  // Minimum building height
             6,  // Maximum building height
             this.material2 // Material for buildings
+            
         );
-        city.position = new Vec4(0, 0, 0, 1); // Center the city on the plane
+        city.position = new Vec4(0, 0, 0, 1);
         this.scene.children.push(city);
     }
 

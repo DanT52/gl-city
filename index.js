@@ -24,14 +24,12 @@ uniform float mat_shininess;
 uniform vec3 sun_dir;
 uniform vec3 sun_color;
 
-
 //point light
 uniform vec3 point_light_pos;
 uniform vec3 point_light_color;
 
 // attenuation constant
 uniform float L;
-
 
 //ins and outs
 in vec3 coordinates;
@@ -42,28 +40,32 @@ in vec3 normal;
 out vec4 v_color;
 out vec2 v_uv;
 
-vec3 spec_color( 
-    vec3 normal, 
-    vec3 light_dir,
-    vec3 eye_dir, 
-    vec3 light_color, 
-    float mat_specular,
-    float mat_shiniess
-) {
-    float cos_light_surf_normal = dot( normal, light_dir );
+vec4 calculateAmbient(float mat_ambient) {
+    return vec4(mat_ambient, mat_ambient, mat_ambient, 1.0);
+}
 
-    if( cos_light_surf_normal <= 0.0 ) {
-        return vec3( 0.0, 0.0, 0.0 );
-    }
+vec4 calculateDiffuse(vec3 normal, vec3 light_dir, vec3 light_color, float mat_diffuse) {
+    float diff = max(dot(normal, light_dir), 0.0);
+    return vec4(mat_diffuse * light_color * diff, 1.0);
+}
 
-    vec3 light_reflection = 
-        2.0 * cos_light_surf_normal * normal - light_dir;
+vec4 calculateSpecular(vec3 normal, vec3 light_dir, vec3 view_dir, vec3 light_color, float mat_specular, float mat_shininess) {
+    vec3 R = 2.0 * dot(light_dir, normal) * normal - light_dir;
+    float spec = pow(max(dot(view_dir, R), 0.0), mat_shininess);
+    return vec4(mat_specular * light_color * spec, 1.0);
+}
 
-    return 
-        pow( 
-            max( dot( light_reflection, normalize( eye_dir ) ), 0.0  ),
-            mat_shininess 
-        ) * light_color * mat_specular;
+vec4 calculatePointLight(vec3 coords_tx, vec3 normal, vec3 view_dir, vec3 light_pos, vec3 light_color, float mat_diffuse, float mat_specular, float mat_shininess, float attenuation_constant) {
+    vec3 point_light_dir = normalize(light_pos - coords_tx);
+    float point_diff = max(dot(normal, point_light_dir), 0.0);
+    vec4 point_diffuse_color = calculateDiffuse(normal, point_light_dir, light_color, mat_diffuse);
+
+    vec4 point_specular_color = calculateSpecular(normal, point_light_dir, view_dir, light_color, mat_specular, mat_shininess);
+
+    float d = length(light_pos - coords_tx);
+    float attenuation = 1.0 / (attenuation_constant * d);
+
+    return (point_diffuse_color + point_specular_color) * attenuation;
 }
 
 void main(void) {
@@ -75,58 +77,34 @@ void main(void) {
     vec3 view_dir = normalize(cam_pos - coords_tx);
     vec3 normal_tx = normalize(mat3(model) * normal);
 
-    //directional light calculations
+    // Directional light calculations
+    vec4 ambient_color = calculateAmbient(mat_ambient);
+    vec4 diffuse_color = calculateDiffuse(normal_tx, light_dir, sun_color, mat_diffuse);
+    vec4 specular_color = calculateSpecular(normal_tx, light_dir, view_dir, sun_color, mat_specular, mat_shininess);
 
-    // Ambient
-    vec4 ambient_color = vec4(mat_ambient, mat_ambient, mat_ambient, 1.0);
-
-    // Diffuse
-    float diff = max(dot(normal_tx, light_dir), 0.0);
-    vec4 diffuse_color = vec4(mat_diffuse * sun_color * diff, 1.0);
-
-    // Specular
-
-    // if i wanna do it with the function
-    // vec3 spec = spec_color(normal_tx, light_dir, view_dir, sun_color, mat_specular, mat_shininess );
-    // vec4 specular_color = vec4(spec, 1.0);
-
-    vec3 R = 2.0 * dot(light_dir, normal_tx) * normal_tx - light_dir;
-    float spec = pow(max(dot(view_dir, R), 0.0), mat_shininess);
-    vec4 specular_color = vec4(mat_specular * sun_color * spec, 1.0);
-
-
-
-
-
-    // Point light calculations
-    vec3 point_light_dir = normalize(point_light_pos - coords_tx);
-    float point_diff = max(dot(normal_tx, point_light_dir), 0.0);
-    vec4 point_diffuse_color = vec4(mat_diffuse * point_light_color * point_diff, 1.0);
-
-    vec3 point_R = 2.0 * dot(point_light_dir, normal_tx) * normal_tx - point_light_dir;
-    float point_spec = pow(max(dot(view_dir, point_R), 0.0), mat_shininess);
-    vec4 point_specular_color = vec4(mat_specular * point_light_color * point_spec, 1.0);
-
-
-    // having these here does seem to make the ligthing look better when
-    // looking from the opposite side of the sphere. 
+    // Handle back-facing lighting for directional light
     float NdotL = dot(light_dir, normal_tx);
     if (NdotL <= 0.0) {
         specular_color = vec4(0.0);
     }
-    float point_NdotL = dot(point_light_dir, normal_tx);
-    if (point_NdotL <= 0.0) {
-        point_specular_color = vec4(0.0);
-    }
 
-    // calculate attenuation for point light
-    float d = length(point_light_pos - coords_tx);
-    float attenuation = 1.0 / (L * d);
-    vec4 point_light_color = (point_diffuse_color + point_specular_color) * attenuation;
+    // Point light calculations
+    vec4 point_light_color = calculatePointLight(
+        coords_tx,
+        normal_tx,
+        view_dir,
+        point_light_pos,
+        point_light_color,
+        mat_diffuse,
+        mat_specular,
+        mat_shininess,
+        L
+    );
 
-
-    v_color = (0.0 * color )+( ambient_color + diffuse_color + specular_color + point_light_color );
-}`;
+    // Combine all lighting
+    v_color = (0.0* color) + ambient_color + diffuse_color + specular_color + point_light_color;
+}
+`;
 
 
 let fragment_source = 
@@ -184,8 +162,8 @@ let angle = 0;
 let previousTime = 0;
 let DESIRED_TICK_RATE = 60;
 let DESIRED_MSPT = 1000 / 60;
-let MOVE_SPEED = 5;
-let ROTATE_SPEED = .4;
+let MOVE_SPEED = 10;
+let ROTATE_SPEED = .2;
 
 let MOVE_PER_FRAME = MOVE_SPEED / DESIRED_TICK_RATE;
 let ROTATE_PER_FRAME = ROTATE_SPEED / DESIRED_TICK_RATE;
