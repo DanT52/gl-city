@@ -8,6 +8,7 @@ let vertex_source =
 precision mediump float;
 
 // set uniforms
+uniform mat4 projection;
 uniform mat4 model;
 uniform mat4 view;
 uniform vec3 cam_pos;
@@ -65,7 +66,7 @@ vec3 spec_color(
 }
 
 void main(void) {
-    gl_Position = view * model * vec4(coordinates, 1.0);
+    gl_Position = projection * view * model * vec4(coordinates, 1.0);
     v_uv = uv;
 
     vec3 light_dir = normalize(sun_dir);
@@ -232,10 +233,22 @@ let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, material);
 let plane = NormalMesh.platform( gl, shaderProgram, 20, 20, 1, 4, material2 );
 console.log(plane)
 let cow = null;
+let cowNode = new Node()
+cowNode.position = new Vec4(20, 50, -100, 1)
+
 NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, material2, (loadedMesh) => {
     cow = loadedMesh;
+    cowNode.data = cow
     console.log(cow)
 });
+
+let scene = new Node(plane);
+scene.position = new Vec4(0, 0, 0, 1);
+let sphereNode = scene.addChild(sphere)
+sphereNode.position = new Vec4(0, 1, -1, 1);
+
+// scene.children.push(cowNode)
+
 
 
 // rendering loop
@@ -245,21 +258,24 @@ function render(currentTime) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // combine transformations to form the model and view matrices
     let model = Mat4.identity();
-    let view = projection.mul(cam.getViewMatrix());
+    let view = cam.getViewMatrix();
 
     // set the model and view matrix uniforms
     set_uniform_matrix4(gl, shaderProgram, 'model', model.data);
     set_uniform_matrix4(gl, shaderProgram, 'view', view.data);
+    set_uniform_matrix4(gl, shaderProgram, 'projection', projection.data);
 
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
-    //render_sphere(gl);
-    //plane.render( gl );
-    //sphere.render( gl );
-    if (cow) {
-        cow.render(gl);
-    }
+
+    // plane.render( gl );
+    // sphere.render( gl );
+    // if (cow) {
+    //     cow.render(gl);
+    // }
+    scene.render(gl, shaderProgram);
+
     updateCameraInfo();
 
     // next frame
