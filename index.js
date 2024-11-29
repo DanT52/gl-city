@@ -210,7 +210,7 @@ function render(currentTime) {
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
-    scene.render();
+    scene.render(currentTime);
 
     updateCameraInfo();
 

@@ -10,6 +10,7 @@ class Scene {
         // Create base elements
         let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
         this.scene = new Node(plane);
+        this.sunbind = this.scene.addChild(null)
         this.mainScene()
     }
 
@@ -58,15 +59,15 @@ class Scene {
 
         // sun
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        let sunbind = this.scene.addChild(null)
-        const sphereNode = sunbind.addChild(sphere)
-        sphereNode.position  = new Vec4(0, 10, 1, 1)
+        
+        const sphereNode = this.sunbind.addChild(sphere)
+        sphereNode.position  = new Vec4(0, 20, 1, 1)
         
         let sun = new DirectionalLightNode( [1.0, 1.0, 1.0])
         
         sphereNode.children.push(sun);
 
-        sunbind.roll = .1
+        
     }
 
     createCity(gl, shaderProgram, width, depth, rows, cols, minHeight, maxHeight, material) {
@@ -99,7 +100,18 @@ class Scene {
         return cityNode;
     }
 
-    render() {
+    render(currentTime) {
+        if (!this.startTime) {
+            this.startTime = currentTime; // Initialize the start time
+        }
+    
+        const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
+        const fullRotationTime = 30; // Time for one full rotation in seconds
+    
+        // Calculate the roll value (modulus ensures it loops continuously)
+        this.sunbind.roll = (elapsedTime / fullRotationTime) % 1;
+    
+        // Render the scene
         this.scene.render(this.gl, this.shaderProgram);
     }
 }
