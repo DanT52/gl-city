@@ -10,7 +10,7 @@ class Scene {
         // Create base elements
         let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
         this.scene = new Node(plane);
-        this.testScene()
+        this.mainScene()
     }
 
     testScene() {
@@ -40,7 +40,7 @@ class Scene {
     }
 
     mainScene() {
-        const city = this.createCity(
+        const cityNode = this.createCity(
             gl,
             shaderProgram,
             12, // Width of the city
@@ -50,10 +50,17 @@ class Scene {
             3,  // Minimum building height
             6,  // Maximum building height
             this.material2 // Material for buildings
-            
         );
-        city.position = new Vec4(0, 0, 0, 1);
-        this.scene.children.push(city);
+        cityNode.position = new Vec4(0, 0, 0, 1);
+        this.scene.children.push(cityNode);
+
+        // sun
+        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
+        const sphereNode = this.scene.addChild(sphere)
+        sphereNode.position  = new Vec4(0, 5, 1, 1)
+        
+        let sun = new DirectionalLightNode([2, -1.0, 3], [1.0, 1.0, 1.0])
+        this.scene.children.push(sun);
     }
 
     createCity(gl, shaderProgram, width, depth, rows, cols, minHeight, maxHeight, material) {

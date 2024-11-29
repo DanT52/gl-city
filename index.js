@@ -61,8 +61,16 @@ vec4 calculateDiffuse(vec3 normal, vec3 light_dir, vec3 light_color, float mat_d
 }
 
 vec4 calculateSpecular(vec3 normal, vec3 light_dir, vec3 view_dir, vec3 light_color, float mat_specular, float mat_shininess) {
+    
+
     vec3 R = 2.0 * dot(light_dir, normal) * normal - light_dir;
     float spec = pow(max(dot(view_dir, R), 0.0), mat_shininess);
+
+    float NdotL = dot(light_dir, normal);
+    if (NdotL <= 0.0) {
+        spec = 0.0;
+    }
+
     return vec4(mat_specular * light_color * spec, 1.0);
 }
 
