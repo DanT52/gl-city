@@ -133,6 +133,39 @@ void main(void) {
     f_color = tex_color * v_color;
 }`;
 
+const skyboxVertexShaderSource = `#version 300 es
+in vec3 a_position;
+
+out vec3 v_texCoord;
+
+uniform mat4 view;
+uniform mat4 projection;
+
+void main() {
+  // Transform the vertex position into the view direction and pass it to the fragment shader
+  v_texCoord = a_position;
+
+  // Project the vertex position onto clip space
+  gl_Position = projection * mat4(mat3(view)) * vec4(a_position, 1.0);
+}
+
+`;
+
+const skyboxFragmentShaderSource = `#version 300 es
+precision mediump float;
+
+in vec3 v_texCoord;
+out vec4 fragColor;
+
+uniform samplerCube u_skybox;
+
+void main() {
+  // Sample the cubemap texture using the interpolated direction
+  fragColor = texture(u_skybox, normalize(v_texCoord));
+}
+`;
+
+const skyboxProgram = create_compile_and_link_program(gl, skyboxVertexShaderSource, skyboxFragmentShaderSource);
 // compile create program
 let shaderProgram = create_compile_and_link_program(gl, vertex_source, fragment_source);
 set_render_params( gl );
@@ -192,11 +225,12 @@ const mat_shininess = 4.0;
 
 // create the scene
 let scene = new Scene(gl, shaderProgram);
+const cubemap = new CubeMap(gl, skyboxProgram, 'cubemap');
 
 // rendering loop
 function render(currentTime) {
     previousTime = currentTime;
-
+    gl.useProgram(shaderProgram);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // combine transformations to form the model and view matrices
     let model = Mat4.identity();
@@ -209,9 +243,13 @@ function render(currentTime) {
 
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
-
+    gl.depthFunc(gl.LEQUAL);
+    cubemap.render(projection, view);
+    gl.depthFunc(gl.LESS);
     scene.render(currentTime);
 
+    
+    
     updateCameraInfo();
 
     // next frame

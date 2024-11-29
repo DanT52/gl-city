@@ -73,6 +73,8 @@ class Node {
     }    
 
     render(gl, shaderProgram) {
+        gl.useProgram(shaderProgram);
+        
         let dirLights = [];
         let pointLights = [];
         const jobs = [];
