@@ -181,51 +181,7 @@ const mat_diffuse = 1.0;
 const mat_specular = 2.0;
 const mat_shininess = 4.0;
 
-let dirLights = [];
-let pointLights = [];
 
-// Push a directional light
-function addDirectionalLight(direction, color) {
-    if (dirLights.length >= MAX_DIR_LIGHTS) {
-        console.warn("Max directional lights reached.");
-        return;
-    }
-    dirLights.push({ direction, color });
-}
-
-// Push a point light
-function addPointLight(position, color, attenuation) {
-    if (pointLights.length >= MAX_POINT_LIGHTS) {
-        console.warn("Max point lights reached.");
-        return;
-    }
-    pointLights.push({ position, color, attenuation });
-}
-
-// Update shader uniforms for lights
-function updateLightUniforms(gl, program) {
-    gl.uniform1i(gl.getUniformLocation(program, "num_dir_lights"), dirLights.length);
-    dirLights.forEach((light, index) => {
-        set_uniform_vec3(gl, program, `dir_lights[${index}].direction`, light.direction);
-        set_uniform_vec3(gl, program, `dir_lights[${index}].color`, light.color);
-    });
-
-    gl.uniform1i(gl.getUniformLocation(program, "num_point_lights"), pointLights.length);
-    pointLights.forEach((light, index) => {
-        set_uniform_vec3(gl, program, `point_lights[${index}].position`, light.position);
-        set_uniform_vec3(gl, program, `point_lights[${index}].color`, light.color);
-        set_uniform_scalar(gl, program, `point_lights[${index}].attenuation`, light.attenuation);
-    });
-}
-
-// Example: Adding lights
-addDirectionalLight([1.0, -1.0, 0.0], [1.0, 1.0, 1.0]); // Sunlight
-addDirectionalLight([1.0, 1.0, 0.0], [0.0, 1.0, 1.0]); // Sunlight
-//addPointLight([0.0, 2.0, -2.0], [1.0, 0.0, 0.0], 1.5);    // Red point light
-//addPointLight([2.0, 1.0, 1.0], [0.0, 1.0, 0.0], 1.0);    // Green point light
-
-// Update the uniforms before rendering
-updateLightUniforms(gl, shaderProgram);
 // create the scene
 let scene = new Scene(gl, shaderProgram);
 

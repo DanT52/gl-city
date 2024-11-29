@@ -37,15 +37,73 @@ class Node {
         }
     }
 
+    generateLightsLists(parentMatrix, dirLights, pointLights) {
+        const matrix = parentMatrix.mul(this.getMatrix());
+        if (this instanceof DirectionalLightNode) {
+            dirLights.push({
+                direction: this.light.direction,
+                color: this.light.color
+            });
+        } else if (this instanceof PointLightNode) {
+            pointLights.push({
+                position: this.light.position,
+                color: this.light.color,
+                attenuation: this.light.attenuation
+            });
+        }
+        for (const child of this.children) {
+            child.generateLightsLists(matrix, dirLights, pointLights);
+        }
+    }
+
+    updateLightUniforms(gl, program, dirLights, pointLights) {
+        gl.uniform1i(gl.getUniformLocation(program, "num_dir_lights"), dirLights.length);
+        dirLights.forEach((light, index) => {
+            set_uniform_vec3(gl, program, `dir_lights[${index}].direction`, light.direction);
+            set_uniform_vec3(gl, program, `dir_lights[${index}].color`, light.color);
+        });
+    
+        gl.uniform1i(gl.getUniformLocation(program, "num_point_lights"), pointLights.length);
+        pointLights.forEach((light, index) => {
+            set_uniform_vec3(gl, program, `point_lights[${index}].position`, light.position);
+            set_uniform_vec3(gl, program, `point_lights[${index}].color`, light.color);
+            set_uniform_scalar(gl, program, `point_lights[${index}].attenuation`, light.attenuation);
+        });
+    }    
+
     render(gl, shaderProgram) {
+        let dirLights = [];
+        let pointLights = [];
         const jobs = [];
+
         this.generateRenderJobs(new Mat4(), jobs);
+        this.generateLightsLists(new Mat4(), dirLights, pointLights);
+        this.updateLightUniforms(gl, shaderProgram, dirLights, pointLights);
+
         for (const job of jobs) {
-            
             set_uniform_matrix4(gl, shaderProgram, 'model', job.matrix.data);
             job.mesh.render(gl);
         }
     }
+}
+
+
+class PointLightNode extends Node {
+    constructor(position, color, attenuation, data = null) {
+        super(data);
+        this.light = { position, color, attenuation };
+    }
+
+
+}
+
+class DirectionalLightNode extends Node {
+    constructor(direction, color, data = null) {
+        super(data);
+        this.light = { direction, color };
+    }
+
+
 }
 
 class RenderMesh {

@@ -357,7 +357,7 @@ class NormalMesh {
         for (let i = 0; i < positions.length; i++) {
             let [x, y, z] = positions[i];
             
-            console.log(normal[i])
+            
             
             let pos_vec = new Vec4(x, y, z, 0.0);
             let pos_norm;

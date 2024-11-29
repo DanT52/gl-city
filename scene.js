@@ -20,6 +20,13 @@ class Scene {
         cowNode.scale = new Vec4(.5, .5, .5, .5)
         cowNode.roll = -.25
         
+        
+
+        let sun = new DirectionalLightNode([1.0, -1.0, 0.0], [1.0, 1.0, 1.0])
+        this.scene.children.push(sun);
+
+        let pointLight = new PointLightNode([0.0, 2.0, -2.0], [1.0, 0.0, 0.0], 1.5)
+        this.scene.children.push(pointLight);
 
 
         NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, this.material, (loadedMesh) => {
