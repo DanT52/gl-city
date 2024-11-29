@@ -139,7 +139,7 @@ set_render_params( gl );
 gl.useProgram(shaderProgram);
 
 // my clear color
-gl.clearColor(0.1, 0.2, 0.3, 1.0);
+gl.clearColor(0.0, 0.1, 0.2, 1.0);
 
 // calculate FOV stuff function
 function perspective(fovX, near, far) {

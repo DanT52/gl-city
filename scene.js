@@ -5,7 +5,7 @@ class Scene {
 
         // Create LitMaterial instances
         this.material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
-        this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.25, 0.5, 0, 0.2);
+        this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.1, 0.5, 0, 0.2);
 
         // Create base elements
         let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
@@ -61,11 +61,14 @@ class Scene {
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
         
         const sphereNode = this.sunbind.addChild(sphere)
-        sphereNode.position  = new Vec4(0, 20, 1, 1)
+        sphereNode.position  = new Vec4(0, 25, 1, 1)
         
-        let sun = new DirectionalLightNode( [1.0, 1.0, 1.0])
+        let sun = new DirectionalLightNode( [0.3, 0.4, 0.4])
         
         sphereNode.children.push(sun);
+        this.sunbind.yaw = .5
+        this.sunbind.pitch = .15
+        this.sunbind.position.y = 9
 
         
     }
@@ -106,7 +109,7 @@ class Scene {
         }
     
         const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
-        const fullRotationTime = 30; // Time for one full rotation in seconds
+        const fullRotationTime = 100; // Time for one full rotation in seconds
     
         // Calculate the roll value (modulus ensures it loops continuously)
         this.sunbind.roll = (elapsedTime / fullRotationTime) % 1;
