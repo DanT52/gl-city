@@ -331,4 +331,13 @@ class Mat4 {
 		
 		return pieces.join( ' ' );
 	}
+    transformPoint() {
+        let x = this.data[ 3 ];
+        let y = this.data[ 7 ];
+        let z = this.data[ 11 ];
+
+        return new Vec4( x, y, z, 1.0 );
+    }
+
+
 }

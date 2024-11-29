@@ -16,25 +16,27 @@ class Scene {
     testScene() {
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
         let cowNode = new Node()
-        cowNode.position = new Vec4(0, 4, 0, 1)
+        cowNode.position = new Vec4(0, 3, 0, 1)
         cowNode.scale = new Vec4(.5, .5, .5, .5)
         cowNode.roll = -.25
         
         
 
-        let sun = new DirectionalLightNode([1.0, -1.0, 0.0], [1.0, 1.0, 1.0])
-        this.scene.children.push(sun);
+        let sun = new DirectionalLightNode( [1.0, 1.0, 1.0])
+        
+        sun.position = new Vec4(0, 3, 5, 1)
 
-        let pointLight = new PointLightNode([0.0, 2.0, -2.0], [1.0, 0.0, 0.0], 1.5)
+        let pointLight = new PointLightNode( [1.0, 0.0, 0.0], 1.5)
         this.scene.children.push(pointLight);
-
+        const sphereNode = this.scene.addChild(sphere)
+        sphereNode.position = new Vec4(0, 1, 0, 1)
 
         NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, this.material, (loadedMesh) => {
             cowNode.data = loadedMesh
         });
-        this.scene.children.push(cowNode);
-        const sphereNode = this.scene.addChild(sphere)
-        sphereNode.position = new Vec4(0, 1, 0, 1)
+        sphereNode.children.push(cowNode);
+        sphereNode.roll = .2;
+        sphereNode.children.push(sun);
 
 
     }
@@ -56,11 +58,15 @@ class Scene {
 
         // sun
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        const sphereNode = this.scene.addChild(sphere)
-        sphereNode.position  = new Vec4(0, 5, 1, 1)
+        let sunbind = this.scene.addChild(null)
+        const sphereNode = sunbind.addChild(sphere)
+        sphereNode.position  = new Vec4(0, 10, 1, 1)
         
-        let sun = new DirectionalLightNode([2, -1.0, 3], [1.0, 1.0, 1.0])
-        this.scene.children.push(sun);
+        let sun = new DirectionalLightNode( [1.0, 1.0, 1.0])
+        
+        sphereNode.children.push(sun);
+
+        sunbind.roll = .1
     }
 
     createCity(gl, shaderProgram, width, depth, rows, cols, minHeight, maxHeight, material) {

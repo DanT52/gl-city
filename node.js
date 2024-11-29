@@ -39,14 +39,15 @@ class Node {
 
     generateLightsLists(parentMatrix, dirLights, pointLights) {
         const matrix = parentMatrix.mul(this.getMatrix());
+        const {x, y, z} = matrix.transformPoint()
         if (this instanceof DirectionalLightNode) {
             dirLights.push({
-                direction: this.light.direction,
+                direction:[x,y,z],
                 color: this.light.color
             });
         } else if (this instanceof PointLightNode) {
             pointLights.push({
-                position: this.light.position,
+                position: [x,y,z],
                 color: this.light.color,
                 attenuation: this.light.attenuation
             });
@@ -89,18 +90,18 @@ class Node {
 
 
 class PointLightNode extends Node {
-    constructor(position, color, attenuation, data = null) {
+    constructor(color, attenuation, data = null) {
         super(data);
-        this.light = { position, color, attenuation };
+        this.light = {  color, attenuation };
     }
 
 
 }
 
 class DirectionalLightNode extends Node {
-    constructor(direction, color, data = null) {
+    constructor(color, data = null) {
         super(data);
-        this.light = { direction, color };
+        this.light = {  color };
     }
 
 
