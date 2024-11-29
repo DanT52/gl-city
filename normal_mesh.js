@@ -300,86 +300,199 @@ class NormalMesh {
 
         return new NormalMesh(gl, program, verts, indis, material, false);
     }
-
-    /**
- * Parse the given text as the body of an OBJ file and create a Mesh.
- * @param {WebGLRenderingContext} gl
- * @param {WebGLProgram} program
- * @param {string} text
- * @returns {NormalMesh}
- */
-    static from_obj_text(gl, program, text, material) {
-        let lines = text.split(/\r?\n/);
+// OLD VERSION
+//     /**
+//  * Parse the given text as the body of an OBJ file and create a Mesh.
+//  * @param {WebGLRenderingContext} gl
+//  * @param {WebGLProgram} program
+//  * @param {string} text
+//  * @returns {NormalMesh}
+//  */
+//     static from_obj_text(gl, program, text, material) {
+//         let lines = text.split(/\r?\n/);
     
-        let coords = []; // x, y, z, r, g, b, a per vertex
-        let normal = [];
-        let elements = []; // indices
+//         let coords = []; // x, y, z, r, g, b, a per vertex
+//         let normal = [];
+//         let elements = []; // indices
     
-        let positions = []; // x, y, z per vertex
+//         let positions = []; // x, y, z per vertex
     
-        let y_min = Infinity;
-        let y_max = -Infinity;
+//         let y_min = Infinity;
+//         let y_max = -Infinity;
     
-        for (let line of lines) {
-            line = line.trim();
+//         for (let line of lines) {
+//             line = line.trim();
     
-            if (line.startsWith('#') || line === '') {
-                continue;
-            }
+//             if (line.startsWith('#') || line === '') {
+//                 continue;
+//             }
     
-            let parts = line.split(/\s+/);
+//             let parts = line.split(/\s+/);
     
-            if (parts[0] === 'v') {
-                // vertex line v x y z
-                let x = parseFloat(parts[1]);
-                let y = parseFloat(parts[2]);
-                let z = parseFloat(parts[3]);
+//             if (parts[0] === 'v') {
+//                 // vertex line v x y z
+//                 let x = parseFloat(parts[1]);
+//                 let y = parseFloat(parts[2]);
+//                 let z = parseFloat(parts[3]);
     
-                positions.push([x, y, z]);
-                // update y_min and y_max for color scaling
-                if (y < y_min) y_min = y;
-                if (y > y_max) y_max = y;
+//                 positions.push([x, y, z]);
+//                 // update y_min and y_max for color scaling
+//                 if (y < y_min) y_min = y;
+//                 if (y > y_max) y_max = y;
     
-            } else if (parts[0] === 'f') {
-                // Face line f v1 v2 v3 ...
-                let v1 = parseInt(parts[1], 10) -1
-                let v2 = parseInt(parts[2], 10) -1
-                let v3 = parseInt(parts[3], 10) -1
-                elements.push(v1, v2, v3)
-            }
+//             } else if (parts[0] === 'f') {
+//                 // Face line f v1 v2 v3 ...
+//                 let v1 = parseInt(parts[1].split('/')[0], 10) - 1;
+//                 let v2 = parseInt(parts[2].split('/')[0], 10) - 1;
+//                 let v3 = parseInt(parts[3].split('/')[0], 10) - 1;
+//                 elements.push(v1, v2, v3);
+//             }
     
             
-        }
+//         }
 
         
     
-        // create the vertex array, including colors
-        for (let i = 0; i < positions.length; i++) {
-            let [x, y, z] = positions[i];
+//         // create the vertex array, including colors
+//         for (let i = 0; i < positions.length; i++) {
+//             let [x, y, z] = positions[i];
             
             
             
-            let pos_vec = new Vec4(x, y, z, 0.0);
-            let pos_norm;
+//             let pos_vec = new Vec4(x, y, z, 0.0);
+//             let pos_norm;
 
-            if (pos_vec.length() === 0) {
-                // Assign a default normal if the vector length is zero
-                pos_norm = new Vec4(0.0, 1.0, 0.0, 0.0); // Example default normal pointing up
-            } else {
-                pos_norm = pos_vec.norm();
-            }
+//             if (pos_vec.length() === 0) {
+//                 // Assign a default normal if the vector length is zero
+//                 pos_norm = new Vec4(0.0, 1.0, 0.0, 0.0); // Example default normal pointing up
+//             } else {
+//                 pos_norm = pos_vec.norm();
+//             }
             
-            // Vary color based on the y-value
-            let t = (y - y_min) / (y_max - y_min);
-            coords.push(x, y, z, 1, 0, 1, 1, pos_norm.x, pos_norm.y, pos_norm.x, pos_norm.y, pos_norm.z );
+//             // Vary color based on the y-value
+//             let t = (y - y_min) / (y_max - y_min);
+//             coords.push(x, y, z, 1, 0, 1, 1, pos_norm.x, pos_norm.y, pos_norm.x, pos_norm.y, pos_norm.z );
+//         }
+//         // create and return the Mesh object
+//         return new NormalMesh( gl, program, coords, elements, material, true );
+    
+//     }
+
+    
+// some of this parsing code is from https://webglfundamentals.org/webgl/lessons/webgl-load-obj.html
+static from_obj_text(gl, program, text, material) {
+    const objPositions = [];
+    const objTexcoords = [];
+    const objNormals = [];
+  
+    const positionBuffer = [];
+    const texcoordBuffer = [];
+    const normalBuffer = [];
+    const indices = [];
+    const indexMap = new Map(); // Map to store "index string" -> "new index"
+  
+    let indexCounter = 0;
+  
+    const keywords = {
+      v(parts) {
+        objPositions.push(parts.map(parseFloat));
+      },
+      vn(parts) {
+        objNormals.push(parts.map(parseFloat));
+      },
+      vt(parts) {
+        objTexcoords.push(parts.map(parseFloat));
+      },
+      f(parts) {
+        const numTriangles = parts.length - 2;
+        for (let tri = 0; tri < numTriangles; ++tri) {
+          processVertex(parts[0]);
+          processVertex(parts[tri + 1]);
+          processVertex(parts[tri + 2]);
         }
-        // create and return the Mesh object
-        return new NormalMesh( gl, program, coords, elements, material, true );
-    
+      },
+    };
+  
+    function processVertex(vert) {
+      if (!vert) return;
+  
+      // Parse the face vertex format "v/vt/vn"
+      const ptn = vert.split('/');
+      const positionIndex = parseInt(ptn[0]) - 1;
+      const texcoordIndex = ptn[1] ? parseInt(ptn[1]) - 1 : -1;
+      const normalIndex = ptn[2] ? parseInt(ptn[2]) - 1 : -1;
+  
+      const key = `${positionIndex}/${texcoordIndex}/${normalIndex}`;
+  
+      if (indexMap.has(key)) {
+        // Reuse the existing index
+        indices.push(indexMap.get(key));
+      } else {
+        // Create a new index
+        if (positionIndex >= 0) {
+          positionBuffer.push(...objPositions[positionIndex]);
+        } else {
+          positionBuffer.push(0, 0, 0);
+        }
+  
+        if (texcoordIndex >= 0) {
+          texcoordBuffer.push(...objTexcoords[texcoordIndex]);
+        } else {
+          texcoordBuffer.push(0, 0);
+        }
+  
+        if (normalIndex >= 0) {
+          normalBuffer.push(...objNormals[normalIndex]);
+        } else {
+          normalBuffer.push(0, 0, 0);
+        }
+  
+        indexMap.set(key, indexCounter);
+        indices.push(indexCounter);
+        indexCounter++;
+      }
     }
-    
-    
-    
+  
+    const keywordRE = /(\w*)(?: )*(.*)/;
+    const lines = text.split('\n');
+    for (let lineNo = 0; lineNo < lines.length; ++lineNo) {
+      const line = lines[lineNo].trim();
+      if (line === '' || line.startsWith('#')) {
+        continue;
+      }
+      const m = keywordRE.exec(line);
+      if (!m) {
+        continue;
+      }
+      const [, keyword, unparsedArgs] = m;
+      const parts = line.split(/\s+/).slice(1);
+      const handler = keywords[keyword];
+      if (!handler) {
+        console.warn('unhandled keyword:', keyword); // eslint-disable-line no-console
+        continue;
+      }
+      handler(parts, unparsedArgs);
+    }
+  
+    let coords = []; // x, y, z, r, g, b, a, u, v, nx, ny, nz per vertex
+    for (let i = 0; i < positionBuffer.length / 3; i++) {
+      const x = positionBuffer[i * 3 + 0];
+      const y = positionBuffer[i * 3 + 1];
+      const z = positionBuffer[i * 3 + 2];
+  
+      const u = texcoordBuffer[i * 2 + 0] || 0;
+      const v = texcoordBuffer[i * 2 + 1] || 0;
+  
+      const nx = normalBuffer[i * 3 + 0] || 0;
+      const ny = normalBuffer[i * 3 + 1] || 0;
+      const nz = normalBuffer[i * 3 + 2] || 0;
+  
+      coords.push(x, y, z, 1, 0, 1, 1, u, v, nx, ny, nz);
+    }
+  
+    return new NormalMesh(gl, program, coords, indices, material, true);
+  }
+  
 
     /**
      * Asynchronously load the obj file as a mesh.

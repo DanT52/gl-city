@@ -9,12 +9,23 @@ class Scene {
 
         // Create base elements
         let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
-        this.scene = new Node(plane);
+
+        this.scene = new Node(null);
+        this.plane = this.scene.addChild(plane)
+        this.plane.yaw = .125
         this.sunbind = this.scene.addChild(null)
         this.mainScene()
+
+        const { baseNode, turbineNode } = this.addTurbine();
+        
+        this.turbine = turbineNode
+        this.plane.children.push(baseNode);
+        
     }
 
     testScene() {
+
+        
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
         let cowNode = new Node()
         cowNode.position = new Vec4(0, 3, 0, 1)
@@ -32,7 +43,7 @@ class Scene {
         const sphereNode = this.scene.addChild(sphere)
         sphereNode.position = new Vec4(0, 1, 0, 1)
 
-        NormalMesh.from_obj_file(gl, 'OBJs/cow.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/turbine/base.obj', shaderProgram, this.material, (loadedMesh) => {
             cowNode.data = loadedMesh
         });
         sphereNode.children.push(cowNode);
@@ -43,6 +54,8 @@ class Scene {
     }
 
     mainScene() {
+
+
         const cityNode = this.createCity(
             gl,
             shaderProgram,
@@ -55,22 +68,51 @@ class Scene {
             this.material2 // Material for buildings
         );
         cityNode.position = new Vec4(0, 0, 0, 1);
-        this.scene.children.push(cityNode);
+        this.plane.children.push(cityNode);
 
-        // sun
+        // moon
         let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        
         const sphereNode = this.sunbind.addChild(sphere)
         sphereNode.position  = new Vec4(0, 25, 1, 1)
-        
         let sun = new DirectionalLightNode( [0.3, 0.4, 0.4])
-        
         sphereNode.children.push(sun);
         this.sunbind.yaw = .5
         this.sunbind.pitch = .15
         this.sunbind.position.y = 9
 
+
+        // galaxy perma light
+
+        let galaxyLightNode = new DirectionalLightNode( [0.58, 0.54, 0.6])
+        galaxyLightNode.position = new Vec4(1, 10, -30)
+        this.scene.children.push(galaxyLightNode)
         
+    }
+
+    addTurbine() {
+
+        let baseNode = new Node()
+        baseNode.scale = new Vec4(.5, .5, .5, .5);
+
+
+        NormalMesh.from_obj_file(gl, 'OBJs/turbine/base.obj', shaderProgram, this.material, (loadedMesh) => {
+            baseNode.data = loadedMesh;
+        });
+
+        let turbineNode = new Node()
+        NormalMesh.from_obj_file(gl, 'OBJs/turbine/turbine.obj', shaderProgram, this.material, (loadedMesh) => {
+            turbineNode.data = loadedMesh;
+        });
+        
+        turbineNode.position = new Vec4(0, 26, .9, 1)
+        turbineNode.roll = .2
+
+
+        baseNode.children.push(turbineNode)
+
+        return { baseNode, turbineNode };
+
+
     }
 
     createCity(gl, shaderProgram, width, depth, rows, cols, minHeight, maxHeight, material) {
@@ -110,9 +152,11 @@ class Scene {
     
         const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
         const fullRotationTime = 100; // Time for one full rotation in seconds
+        const turbineRotationTime = 20;
     
         // Calculate the roll value (modulus ensures it loops continuously)
         this.sunbind.roll = (elapsedTime / fullRotationTime) % 1;
+        this.turbine.roll = (elapsedTime / turbineRotationTime) % 1;
     
         // Render the scene
         this.scene.render(this.gl, this.shaderProgram);
