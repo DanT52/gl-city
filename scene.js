@@ -12,7 +12,7 @@ class Scene {
 
         this.scene = new Node(null);
         this.plane = this.scene.addChild(plane)
-        this.plane.yaw = .125
+        //this.plane.yaw = .125
         this.sunbind = this.scene.addChild(null)
         
         this.turbine = null
@@ -20,8 +20,13 @@ class Scene {
         this.topProp = null
         this.backProp = null
 
-        this.mainScene()
+        this.car = null
+        this.frontWheels = null
+        this.backWheels = null
 
+        this.mainScene()
+        
+        
         
         
     }
@@ -57,12 +62,13 @@ class Scene {
         // sphereNode.roll = .2;
         // sphereNode.children.push(sun);
 
-        let helibase = this.addHelicopter()
+        // let helibase = this.addHelicopter()
 
         
-        this.scene.children.push(helibase);
+        // this.scene.children.push(helibase);
 
 
+        
     }
 
     
@@ -116,7 +122,51 @@ class Scene {
         helibase.yaw = -.03
         heliAnchor.children.push(helibase);
         this.scene.children.push(heliAnchor)
+
+
+        // add in the car
+
+        let carNode = this.addCar()
+
+        carNode.scale = new Vec4(.1, .1, .1, 0)
+        carNode.position = new Vec4(4.5, 0, -4.5, 0)
         
+    }
+
+    addCar() {
+        let carNode = new Node();
+        let frontWheels = new Node();
+        let backWheels = new Node();
+        this.car = carNode
+        this.frontWheels = frontWheels
+        this.backWheels = backWheels
+
+        NormalMesh.from_obj_file(gl, 'OBJs/car/carBody.obj', shaderProgram, this.material, (loadedMesh) => {
+            carNode.data = loadedMesh
+        });
+        NormalMesh.from_obj_file(gl, 'OBJs/car/wheels.obj', shaderProgram, this.material, (loadedMesh) => {
+            frontWheels.data = loadedMesh
+            backWheels.data = loadedMesh
+        });
+
+        let pointLight = new PointLightNode( [0.4, 0.4, 1.0], 2)
+        let pointLight2 = new PointLightNode( [0.4, 0.4, 1.0], 2)
+
+        pointLight.position = new Vec4(1.8, 1.65, 6.73, 0)
+        pointLight2.position = new Vec4(-1.8, 1.65, 6.73, 0)
+        backWheels.position = new Vec4(1.85, 0.7, -2.7, 0)
+        backWheels.scale = new Vec4(.95, 0.95, 0.95, 0)
+
+        frontWheels.position = new Vec4(1.85, 0.7, 2.9, 0)
+        frontWheels.scale = new Vec4(.95, 0.95, 0.95, 0)
+
+        carNode.children.push(frontWheels)
+        carNode.children.push(backWheels)
+        carNode.children.push(pointLight)
+        carNode.children.push(pointLight2)
+        this.plane.children.push(carNode)
+
+        return carNode
     }
 
     addHelicopter() {
@@ -212,6 +262,7 @@ class Scene {
         }
         return cityNode;
     }
+    
 
     render(currentTime) {
         if (!this.startTime) {
@@ -219,8 +270,10 @@ class Scene {
         }
     
         const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
+
         const fullRotationTime = 100; // Time for one full rotation in seconds
         const turbineRotationTime = 20;
+        const helicopterTime = 16;
         const propSpin = 1;
     
         // Calculate the roll value (modulus ensures it loops continuously)
@@ -229,9 +282,59 @@ class Scene {
 
         this.topProp.yaw = (elapsedTime / propSpin) % 1;
         this.backProp.pitch = (elapsedTime / propSpin) % 1;
-        this.heliAnchor.yaw = -(elapsedTime / turbineRotationTime) % 1;
+        this.heliAnchor.yaw = -(elapsedTime / helicopterTime) % 1;
+
+
+        // car animation
+        const squareTime = 16; // Total time to complete the square in seconds
+        const legTime = 4; // Time for each leg of the square
+        const turnTime = 1; // Time allocated for turning at the end of the leg
+        const totalLegs = 4; // Total legs in the square
+    
+        const legProgress = elapsedTime % squareTime; // Time within the current loop of the square
+        const currentLeg = Math.floor(legProgress / legTime); // Current leg index (0 to 3)
+        const legElapsedTime = legProgress % legTime; // Time elapsed within the current leg
+        const legProgressNormalized = legElapsedTime / legTime; // Normalized progress within the current leg (0 to 1)
+    
+        // Define square corners
+        const positions = [
+            new Vec4(4.5, 0, 4.5, 0),
+            new Vec4(-4.5, 0, 4.5, 0),
+            new Vec4(-4.5, 0, -4.5, 0),
+            new Vec4(4.5, 0, -4.5, 0)
+        ];
+    
+        // Compute car position based on current leg
+        const startPosition = positions[currentLeg];
+        const nextPosition = positions[(currentLeg + 1) % totalLegs];
+        this.car.position = new Vec4(
+            startPosition.x + (nextPosition.x - startPosition.x) * legProgressNormalized,
+            startPosition.y + (nextPosition.y - startPosition.y) * legProgressNormalized,
+            startPosition.z + (nextPosition.z - startPosition.z) * legProgressNormalized,
+            0
+        );
+    
+        // Compute car yaw for smooth turning in the last turnTime of the leg
+        const directions = [-0.25, -0.5, -0.75, 0]; // Yaw directions (in tau: 0, 90°, 180°, 270°)
+        const startYaw = directions[currentLeg];
+        const nextYaw = directions[(currentLeg + 1) % totalLegs];
+    
+        // Ensure yaw rotates in the shortest direction
+        let deltaYaw = nextYaw - startYaw;
+        if (deltaYaw > 0.5) deltaYaw -= 1; // Adjust for shortest rotation (clockwise)
+        if (deltaYaw < -0.5) deltaYaw += 1; // Adjust for shortest rotation (counter-clockwise)
+    
+        if (legElapsedTime >= legTime - turnTime) {
+            // Start turning during the last turnTime of the leg
+            const turnProgress = (legElapsedTime - (legTime - turnTime)) / turnTime; // Normalized progress within turnTime
+            this.car.yaw = (startYaw + deltaYaw * turnProgress + 1) % 1; // Ensure yaw stays within bounds (0 to 1 in tau)
+        } else {
+            // Keep yaw constant during the movement phase
+            this.car.yaw = startYaw;
+        }
     
         // Render the scene
         this.scene.render(this.gl, this.shaderProgram);
     }
+    
 }
