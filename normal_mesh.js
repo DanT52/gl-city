@@ -117,57 +117,57 @@ class NormalMesh {
     }
 
     /**
- * Create a flat platform in the xz plane, subdivided into 9 smaller squares for better lighting effects.
- * @param {WebGLRenderingContext} gl 
- */
-static platform(gl, program, width, depth, uv_min, uv_max, material) {
-  const hwidth = width / 2;
-  const hdepth = depth / 2;
+     * Create a flat platform in the xz plane, subdivided so that it has better lighting effects
+     * @param {WebGLRenderingContext} gl 
+     */
+    static platform(gl, program, width, depth, uv_min, uv_max, material) {
+      const hwidth = width / 2;
+      const hdepth = depth / 2;
 
-  // Subdivide
-  const rows = 50;
-  const cols = 50;
-  const dx = width / cols;
-  const dz = depth / rows;
-  const du = (uv_max - uv_min) / cols;
-  const dv = (uv_max - uv_min) / rows;
+      // subdivide
+      const rows = 50;
+      const cols = 50;
+      const dx = width / cols;
+      const dz = depth / rows;
+      const du = (uv_max - uv_min) / cols;
+      const dv = (uv_max - uv_min) / rows;
 
-  let verts = [];
-  let indis = [];
+      let verts = [];
+      let indis = [];
 
-  // Generate vertices and UV coordinates
-  for (let row = 0; row <= rows; row++) {
-      for (let col = 0; col <= cols; col++) {
-          const x = -hwidth + col * dx;
-          const z = -hdepth + row * dz;
-          const u = uv_min + col * du;
-          const v = uv_min + row * dv;
+      // generate vertices and UV coordinates
+      for (let row = 0; row <= rows; row++) {
+          for (let col = 0; col <= cols; col++) {
+              const x = -hwidth + col * dx;
+              const z = -hdepth + row * dz;
+              const u = uv_min + col * du;
+              const v = uv_min + row * dv;
 
-          verts.push(
-              x, 0, z,           // Position
-              1.0, 1.0, 1.0, 1.0, // Color (default white)
-              u, v,             // UV coordinates
-              0.0, 1.0, 0.0     // Normal (pointing up)
-          );
+              verts.push(
+                  x, 0, z,           // position
+                  1.0, 1.0, 1.0, 1.0, // color (default white)
+                  u, v,             // UV coordinates
+                  0.0, 1.0, 0.0     // normal (pointing up)
+              );
+          }
       }
-  }
 
-  // Generate indices for the grid
-  for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-          const topLeft = row * (cols + 1) + col;
-          const topRight = topLeft + 1;
-          const bottomLeft = topLeft + (cols + 1);
-          const bottomRight = bottomLeft + 1;
+      // generate indices for the grid
+      for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+              const topLeft = row * (cols + 1) + col;
+              const topRight = topLeft + 1;
+              const bottomLeft = topLeft + (cols + 1);
+              const bottomRight = bottomLeft + 1;
 
-          // Two triangles per square
-          indis.push(topLeft, bottomLeft, bottomRight);
-          indis.push(topLeft, bottomRight, topRight);
+              // two triangles per square
+              indis.push(topLeft, bottomLeft, bottomRight);
+              indis.push(topLeft, bottomRight, topRight);
+          }
       }
-  }
 
-  return new NormalMesh(gl, program, verts, indis, material, false);
-}
+      return new NormalMesh(gl, program, verts, indis, material, false);
+    }
 
     /**
      * Load a mesh from a heightmap.
@@ -333,83 +333,6 @@ static platform(gl, program, width, depth, uv_min, uv_max, material) {
 
         return new NormalMesh(gl, program, verts, indis, material, false);
     }
-// OLD VERSION
-//     /**
-//  * Parse the given text as the body of an OBJ file and create a Mesh.
-//  * @param {WebGLRenderingContext} gl
-//  * @param {WebGLProgram} program
-//  * @param {string} text
-//  * @returns {NormalMesh}
-//  */
-//     static from_obj_text(gl, program, text, material) {
-//         let lines = text.split(/\r?\n/);
-    
-//         let coords = []; // x, y, z, r, g, b, a per vertex
-//         let normal = [];
-//         let elements = []; // indices
-    
-//         let positions = []; // x, y, z per vertex
-    
-//         let y_min = Infinity;
-//         let y_max = -Infinity;
-    
-//         for (let line of lines) {
-//             line = line.trim();
-    
-//             if (line.startsWith('#') || line === '') {
-//                 continue;
-//             }
-    
-//             let parts = line.split(/\s+/);
-    
-//             if (parts[0] === 'v') {
-//                 // vertex line v x y z
-//                 let x = parseFloat(parts[1]);
-//                 let y = parseFloat(parts[2]);
-//                 let z = parseFloat(parts[3]);
-    
-//                 positions.push([x, y, z]);
-//                 // update y_min and y_max for color scaling
-//                 if (y < y_min) y_min = y;
-//                 if (y > y_max) y_max = y;
-    
-//             } else if (parts[0] === 'f') {
-//                 // Face line f v1 v2 v3 ...
-//                 let v1 = parseInt(parts[1].split('/')[0], 10) - 1;
-//                 let v2 = parseInt(parts[2].split('/')[0], 10) - 1;
-//                 let v3 = parseInt(parts[3].split('/')[0], 10) - 1;
-//                 elements.push(v1, v2, v3);
-//             }
-    
-            
-//         }
-
-        
-    
-//         // create the vertex array, including colors
-//         for (let i = 0; i < positions.length; i++) {
-//             let [x, y, z] = positions[i];
-            
-            
-            
-//             let pos_vec = new Vec4(x, y, z, 0.0);
-//             let pos_norm;
-
-//             if (pos_vec.length() === 0) {
-//                 // Assign a default normal if the vector length is zero
-//                 pos_norm = new Vec4(0.0, 1.0, 0.0, 0.0); // Example default normal pointing up
-//             } else {
-//                 pos_norm = pos_vec.norm();
-//             }
-            
-//             // Vary color based on the y-value
-//             let t = (y - y_min) / (y_max - y_min);
-//             coords.push(x, y, z, 1, 0, 1, 1, pos_norm.x, pos_norm.y, pos_norm.x, pos_norm.y, pos_norm.z );
-//         }
-//         // create and return the Mesh object
-//         return new NormalMesh( gl, program, coords, elements, material, true );
-    
-//     }
 
     
 // some of this parsing code is from https://webglfundamentals.org/webgl/lessons/webgl-load-obj.html

@@ -27,16 +27,19 @@ class Node {
         return matrix;
     }
 
+    // here we generate the render jobs recursivly
     generateRenderJobs(parentMatrix, jobs) {
         const matrix = parentMatrix.mul(this.getMatrix());
         if (this.data) {
             jobs.push(new RenderMesh(matrix, this.data));
         }
+        // going for each child
         for (const child of this.children) {
             child.generateRenderJobs(matrix, jobs);
         }
     }
 
+    // generates the dirLights and PointLights lists recursivly
     generateLightsLists(parentMatrix, dirLights, pointLights) {
         const matrix = parentMatrix.mul(this.getMatrix());
         const {x, y, z} = matrix.transformPoint()
@@ -57,6 +60,7 @@ class Node {
         }
     }
 
+    // this function updates the dir lights and point lights lists in the shader
     updateLightUniforms(gl, program, dirLights, pointLights) {
         gl.uniform1i(gl.getUniformLocation(program, "num_dir_lights"), dirLights.length);
         dirLights.forEach((light, index) => {
@@ -72,17 +76,22 @@ class Node {
         });
     }    
 
+
     render(gl, shaderProgram) {
         gl.useProgram(shaderProgram);
+        
         
         let dirLights = [];
         let pointLights = [];
         const jobs = [];
-
+        //first get the list of jobs and lights
         this.generateRenderJobs(new Mat4(), jobs);
         this.generateLightsLists(new Mat4(), dirLights, pointLights);
+
+        // update the lights in the shader
         this.updateLightUniforms(gl, shaderProgram, dirLights, pointLights);
 
+        // render each of the meshes in jobs.
         for (const job of jobs) {
             set_uniform_matrix4(gl, shaderProgram, 'model', job.matrix.data);
             job.mesh.render(gl);
@@ -94,18 +103,15 @@ class Node {
 class PointLightNode extends Node {
     constructor(color, attenuation, data = null) {
         super(data);
-        this.light = {  color, attenuation };
+        this.light = { color, attenuation };
     }
-
-
 }
 
 class DirectionalLightNode extends Node {
     constructor(color, data = null) {
         super(data);
-        this.light = {  color };
+        this.light = { color };
     }
-
 
 }
 

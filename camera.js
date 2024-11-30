@@ -1,6 +1,5 @@
 class Camera {
-    // camera stuff go here
-    // camera has position
+
 // camera has yaw pitch and roll angles
     constructor(pos, yaw, pitch, roll) {
 
@@ -14,12 +13,6 @@ class Camera {
 
 
     // movement 
-
-    // move(x, y, z) {
-    //     // this moves along the world axis
-    //     this.pos = this.pos.add(new Vec4(x, y, z, 0))
-    // }
-
     move(strafe, vertical, forward) {
         
         let vector = new Vec4(strafe, vertical, forward, 0);
@@ -39,7 +32,6 @@ class Camera {
 
     // rotations 
 
-    
     // for yaw after a full rotation reset
     rotateYaw(angle) {
         this.yaw += angle;
@@ -72,11 +64,10 @@ class Camera {
     }
 
 
-// getting the veiw matrix 
-//T * Y * P * R
-// then after do matrix.inverse()
-// that is it
-
+    // getting the veiw matrix 
+    //T * Y * P * R
+    // then after do matrix.inverse()
+    // that is it
     
     getViewMatrix() {
         let T = Mat4.translation(this.pos.x, this.pos.y, this.pos.z);

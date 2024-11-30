@@ -131,19 +131,16 @@ void main(void) {
     f_color = tex_color * v_color;
 }`;
 
+
+// skybox shaders
 const skyboxVertexShaderSource = `#version 300 es
 in vec3 a_position;
-
 out vec3 v_texCoord;
-
 uniform mat4 view;
 uniform mat4 projection;
 
 void main() {
-  // Transform the vertex position into the view direction and pass it to the fragment shader
   v_texCoord = a_position;
-
-  // Project the vertex position onto clip space
   gl_Position = projection * mat4(mat3(view)) * vec4(a_position, 1.0);
 }
 
@@ -154,18 +151,15 @@ precision mediump float;
 
 in vec3 v_texCoord;
 out vec4 fragColor;
-
 uniform samplerCube u_skybox;
 
 void main() {
-  // Sample the cubemap texture using the interpolated direction
   fragColor = texture(u_skybox, normalize(v_texCoord));
 }
 `;
-
+// compile create programs
 const skyboxProgram = create_compile_and_link_program(gl, skyboxVertexShaderSource, skyboxFragmentShaderSource);
-// compile create program
-let shaderProgram = create_compile_and_link_program(gl, vertex_source, fragment_source);
+const shaderProgram = create_compile_and_link_program(gl, vertex_source, fragment_source);
 set_render_params( gl );
 gl.useProgram(shaderProgram);
 
@@ -193,9 +187,6 @@ function perspective(fovX, near, far) {
     // return the frustum projection matrix using the calculated planes
     return Mat4.frustum(leftPlane, rightPlane, bottomPlane, topfPlane, near, far);
 }
-
-
-
 // get the frustum projection thing
 let projection = perspective(0.25,.20, 100);
 
@@ -221,11 +212,12 @@ const mat_specular = 2.0;
 const mat_shininess = 4.0;
 
 
-// create the scene
+// create the scene and cubemap
 let scene = new Scene(gl, shaderProgram);
 const cubemap = new CubeMap(gl, skyboxProgram, 'cubemap');
 
-// Load camera position from local storage
+// load cam position from local storage 
+//(i  decided to save from camera position so for easier adjustment of components)
 function loadCameraPosition() {
     const savedPosition = localStorage.getItem('cameraPosition');
     if (savedPosition) {
@@ -237,7 +229,7 @@ function loadCameraPosition() {
     }
 }
 
-// Save camera position to local storage
+// save camera position to local storage
 function saveCameraPosition() {
     const cameraPosition = {
         x: cam.pos.x,
@@ -267,14 +259,13 @@ function render(currentTime) {
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
 
-    
+    // render cubemap
     cubemap.render(projection, view);
     
-
+    // render the scene
     scene.render(currentTime);
 
-    
-    
+    // update camera stats
     updateCameraInfo();
 
     // next frame
@@ -309,7 +300,6 @@ function update() {
 }
 
 
-
 // mouse controls
 let isMouseDown = false;
 let lastMouseX = 0;
@@ -342,9 +332,7 @@ document.addEventListener('mousemove', (event) => {
 
         lastMouseX = event.clientX;
         lastMouseY = event.clientY;
-
     }
-    
     
 });
 
@@ -398,6 +386,6 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas(); // initial call to set the canvas size
 
-// Save the camera position periodically
+// save the camera position periodically
 setInterval(saveCameraPosition, 1000);
 

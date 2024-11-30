@@ -170,7 +170,7 @@ function set_vertex_attrib_to_buffer(
  * @param {WebGLRenderingContext} gl 
  */
 function set_render_params( gl ) {
-    // gl.clearColor( 0.0, 0.0, 0.0, 1 );
+
     gl.clearColor( 0.5, 0.8, 1.0, 1.0 );
 
     gl.enable( gl.DEPTH_TEST );
@@ -181,7 +181,6 @@ function set_render_params( gl ) {
 
     gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
 
-    // gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
 }
 
 /** Sets uniform data for a row-major matrix4
@@ -196,12 +195,9 @@ function set_uniform_matrix4( gl, program, name, data ) {
 
 
 function set_uniform_int( gl, program, name, data ) {
-    // let old_prog = gl.getParameter( gl.CURRENT_PROGRAM );
-    // gl.useProgram( program );
 
     const loc = gl.getUniformLocation( program, name );
 
     gl.uniform1i( loc, data );
 
-    // gl.useProgram( old_prog );
 }

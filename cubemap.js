@@ -1,10 +1,13 @@
+// with help from 
+// https://webgl2fundamentals.org/webgl/lessons/webgl-skybox.html
+// https://learnopengl.com/Advanced-OpenGL/Cubemaps
 class CubeMap {
     constructor(gl, program, folderPath) {
       this.gl = gl;
       this.program = program;
       this.folderPath = folderPath;
   
-      // Define the faces and corresponding file names
+      // define the faces and corresponding file names
     this.faceInfos = [
       { target: gl.TEXTURE_CUBE_MAP_POSITIVE_X, url: `${folderPath}/px.png` },
       { target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X, url: `${folderPath}/nx.png` },
@@ -14,11 +17,11 @@ class CubeMap {
       { target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, url: `${folderPath}/nz.png` },
     ];
   
-      // Initialize the texture
+      // texture
       this.texture = this.gl.createTexture();
       this.gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
   
-      // Allocate texture storage and set defaults for each face
+      // allocate texture storage and set defaults for each face
       this.faceInfos.forEach((faceInfo) => {
         const { target } = faceInfo;
         this.gl.texImage2D(target, 0, gl.RGBA, 512, 512, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -28,10 +31,8 @@ class CubeMap {
       this.gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       this.gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   
-      // Load images for each face
+      // load images for each face
       this.loadCubeMapTextures();
-  
-      // Create a buffer for the cube
       this.cubeBuffer = this.createCubeBuffer();
     }
   
@@ -61,9 +62,8 @@ class CubeMap {
     createCubeBuffer() {
       const gl = this.gl;
   
-      // Cube vertex positions
+      // cube vertex positions
       const vertices = new Float32Array([
-        // Positions for each face of the cube
         -1.0,  1.0, -1.0,   -1.0, -1.0, -1.0,    1.0, -1.0, -1.0,  // Front face
          1.0, -1.0, -1.0,    1.0,  1.0, -1.0,   -1.0,  1.0, -1.0,  // Front face
     
@@ -85,41 +85,41 @@ class CubeMap {
     
       
   
-      // Create buffer
+      // buffer
       const buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-  
+
       return buffer;
     }
   
     render(projection, view) {
       const gl = this.gl;
   
-      // Use the cube map shader program
+      // make sure we are using correct shader program
       gl.useProgram(this.program);
   
-      // Disable depth write (we want the skybox to appear behind everything)
+      // we want the skybox to appear behind everything
       gl.depthMask(false);
   
-      // Set up cube buffer and attributes
+      // set up cube buffer and attributes
       gl.bindBuffer(gl.ARRAY_BUFFER, this.cubeBuffer);
       const positionLocation = gl.getAttribLocation(this.program, "a_position");
       gl.enableVertexAttribArray(positionLocation);
       gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-  
+      
+      // set uniforms
       set_uniform_matrix4( gl, this.program, 'projection', projection.data );
       set_uniform_matrix4( gl, this.program, 'view', view.data );
   
-      // Bind the cube map texture
+      // bind the cube map texture
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.texture);
       gl.uniform1i(gl.getUniformLocation(this.program, "u_skybox"), 0);
   
-      // Draw the cube
       gl.drawArrays(gl.TRIANGLES, 0, 36);
   
-      // Re-enable depth writing
+      // enable depth writing
       gl.depthMask(true);
     }
   }

@@ -1,5 +1,3 @@
-// keys.js
-// code from slides
 class Keys {
     constructor() {
         this.keys_down = {};
@@ -28,9 +26,4 @@ class Keys {
         return !this.keys_down[code];
     }
 
-    // keys_down_list() {
-    //     return Object.entries(this.keys_down)
-    //         .filter(kv => kv[1]) // the value
-    //         .map(kv => kv[0]); // the key
-    // }
 }
