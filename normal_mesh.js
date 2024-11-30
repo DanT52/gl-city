@@ -117,24 +117,57 @@ class NormalMesh {
     }
 
     /**
-     * Create a flat platform in the xz plane.
-     * @param {WebGLRenderingContext} gl 
-     */
-    static platform( gl, program, width, depth, uv_min, uv_max, material ) {
-        let hwidth = width / 2;
-        let hdepth = depth / 2;
-        
-        let verts = [
-            -hwidth, 0, -hdepth,  1.0, 1.0, 1.0, 1.0,     uv_min, uv_max,   0.0, 1.0, 0.0,
-            hwidth, 0, -hdepth,   1.0, 1.0, 1.0, 1.0,     uv_max, uv_max,   0.0, 1.0, 0.0,
-            hwidth, 0, hdepth,    1.0, 1.0, 1.0, 1.0,     uv_max, uv_min,   0.0, 1.0, 0.0,
-            -hwidth, 0, hdepth,   1.0, 1.0, 1.0, 1.0,     uv_min, uv_min,   0.0, 1.0, 0.0,
-        ];
+ * Create a flat platform in the xz plane, subdivided into 9 smaller squares for better lighting effects.
+ * @param {WebGLRenderingContext} gl 
+ */
+static platform(gl, program, width, depth, uv_min, uv_max, material) {
+  const hwidth = width / 2;
+  const hdepth = depth / 2;
 
-        let indis = [ 0, 1, 2, 2, 3, 0, ];
+  // Subdivide
+  const rows = 50;
+  const cols = 50;
+  const dx = width / cols;
+  const dz = depth / rows;
+  const du = (uv_max - uv_min) / cols;
+  const dv = (uv_max - uv_min) / rows;
 
-        return new NormalMesh( gl, program, verts, indis, material, false );
-    }
+  let verts = [];
+  let indis = [];
+
+  // Generate vertices and UV coordinates
+  for (let row = 0; row <= rows; row++) {
+      for (let col = 0; col <= cols; col++) {
+          const x = -hwidth + col * dx;
+          const z = -hdepth + row * dz;
+          const u = uv_min + col * du;
+          const v = uv_min + row * dv;
+
+          verts.push(
+              x, 0, z,           // Position
+              1.0, 1.0, 1.0, 1.0, // Color (default white)
+              u, v,             // UV coordinates
+              0.0, 1.0, 0.0     // Normal (pointing up)
+          );
+      }
+  }
+
+  // Generate indices for the grid
+  for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+          const topLeft = row * (cols + 1) + col;
+          const topRight = topLeft + 1;
+          const bottomLeft = topLeft + (cols + 1);
+          const bottomRight = bottomLeft + 1;
+
+          // Two triangles per square
+          indis.push(topLeft, bottomLeft, bottomRight);
+          indis.push(topLeft, bottomRight, topRight);
+      }
+  }
+
+  return new NormalMesh(gl, program, verts, indis, material, false);
+}
 
     /**
      * Load a mesh from a heightmap.

@@ -4,77 +4,35 @@ class Scene {
         this.shaderProgram = shaderProgram;
 
         // Create LitMaterial instances
-        this.material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 0.5, 1.0, 2.0);
-        this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.1, 0.5, 0, 0.2);
+        this.metal = new LitMaterial(gl, 'texture/metal.png', gl.LINEAR, 0.25, 0.5, 1.0, 2.0);
+        this.city = new LitMaterial(gl, 'texture/city.png', gl.LINEAR, 0.5, 0.5, 2.5, 2);
+        this.ground = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.2, 0.5, 0.1, 0.1);
+        
+        this.BlackMetal = new LitMaterial(gl, 'texture/blackMetal.png', gl.LINEAR, 0.5, 0.5, 2, 2);
+        this.moon = new LitMaterial(gl, 'texture/moon.png', gl.LINEAR, 1, 0.1, 0.1, 0.1);
+
 
         // Create base elements
-        let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.material2);
-
+        let plane = NormalMesh.platform(gl, shaderProgram, 15, 15, 1, 4, this.ground);
         this.scene = new Node(null);
         this.plane = this.scene.addChild(plane)
-        //this.plane.yaw = .125
+        this.plane.yaw = .125
         this.sunbind = this.scene.addChild(null)
-        
         this.turbine = null
         this.heliAnchor = null
         this.topProp = null
         this.backProp = null
-
         this.car = null
         this.frontWheels = null
         this.backWheels = null
 
         this.mainScene()
         
-        
-        
-        
     }
 
-    testScene() {
 
-        
-        
-        
-        
-        // lights
-        let sun = new DirectionalLightNode( [1.0, 1.0, -10.0])
-        sun.position = new Vec4(0, 3, 5, 1)
-        let pointLight = new PointLightNode( [1.0, 0.0, 0.0], 1.5)
-        this.scene.children.push(pointLight);
-        this.scene.children.push(sun);
-
-
-        // let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        // let cowNode = new Node()
-        // cowNode.position = new Vec4(0, 3, 0, 1)
-        // cowNode.scale = new Vec4(.5, .5, .5, .5)
-        // cowNode.roll = -.25
-
-
-        // const sphereNode = this.scene.addChild(sphere)
-        // sphereNode.position = new Vec4(0, 1, 0, 1)
-
-        // NormalMesh.from_obj_file(gl, 'OBJs/helicopter/helibody.obj', shaderProgram, this.material, (loadedMesh) => {
-        //     cowNode.data = loadedMesh
-        // });
-        // sphereNode.children.push(cowNode);
-        // sphereNode.roll = .2;
-        // sphereNode.children.push(sun);
-
-        // let helibase = this.addHelicopter()
-
-        
-        // this.scene.children.push(helibase);
-
-
-        
-    }
-
-    
 
     mainScene() {
-
 
         const cityNode = this.createCity(
             gl,
@@ -85,15 +43,16 @@ class Scene {
             5,  // Number of columns
             3,  // Minimum building height
             6,  // Maximum building height
-            this.material2 // Material for buildings
+            this.city // Material for buildings
         );
         cityNode.position = new Vec4(0, 0, 0, 1);
         this.plane.children.push(cityNode);
 
         // moon
-        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
+        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.moon);
         const sphereNode = this.sunbind.addChild(sphere)
         sphereNode.position  = new Vec4(0, 25, 1, 1)
+        sphereNode.roll = 0.225
         let sun = new DirectionalLightNode( [0.3, 0.4, 0.4])
         sphereNode.children.push(sun);
         this.sunbind.yaw = .5
@@ -141,10 +100,10 @@ class Scene {
         this.frontWheels = frontWheels
         this.backWheels = backWheels
 
-        NormalMesh.from_obj_file(gl, 'OBJs/car/carBody.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/car/carBody.obj', shaderProgram, this.BlackMetal, (loadedMesh) => {
             carNode.data = loadedMesh
         });
-        NormalMesh.from_obj_file(gl, 'OBJs/car/wheels.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/car/wheels.obj', shaderProgram, this.metal, (loadedMesh) => {
             frontWheels.data = loadedMesh
             backWheels.data = loadedMesh
         });
@@ -179,17 +138,17 @@ class Scene {
         this.backProp = backProp;
 
         //load meshes
-        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/helibody.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/helibody.obj', shaderProgram, this.metal, (loadedMesh) => {
             helibody.data = loadedMesh
         });
-        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/top_prop.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/top_prop.obj', shaderProgram, this.BlackMetal, (loadedMesh) => {
             topProp.data = loadedMesh
         });
-        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/back_prop.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/back_prop.obj', shaderProgram, this.BlackMetal, (loadedMesh) => {
             backProp.data = loadedMesh
         });
-        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material2);
-        let pointLight = new PointLightNode( [1.0, 0.0, 1.0], .7)
+        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.moon);
+        let pointLight = new PointLightNode( [0.87, 0.81, 0.65], .3)
 
 
         
@@ -213,12 +172,12 @@ class Scene {
         baseNode.scale = new Vec4(.5, .5, .5, .5);
 
 
-        NormalMesh.from_obj_file(gl, 'OBJs/turbine/base.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/turbine/base.obj', shaderProgram, this.metal, (loadedMesh) => {
             baseNode.data = loadedMesh;
         });
 
         let turbineNode = new Node()
-        NormalMesh.from_obj_file(gl, 'OBJs/turbine/turbine.obj', shaderProgram, this.material, (loadedMesh) => {
+        NormalMesh.from_obj_file(gl, 'OBJs/turbine/turbine.obj', shaderProgram, this.BlackMetal, (loadedMesh) => {
             turbineNode.data = loadedMesh;
         });
         
@@ -271,10 +230,11 @@ class Scene {
     
         const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
 
-        const fullRotationTime = 100; // Time for one full rotation in seconds
+        const fullRotationTime = 100; // moon rotation
         const turbineRotationTime = 20;
         const helicopterTime = 16;
         const propSpin = 1;
+        const tireSpin = 0.7;
     
         // Calculate the roll value (modulus ensures it loops continuously)
         this.sunbind.roll = (elapsedTime / fullRotationTime) % 1;
@@ -332,6 +292,9 @@ class Scene {
             // Keep yaw constant during the movement phase
             this.car.yaw = startYaw;
         }
+
+        this.frontWheels.pitch = -(elapsedTime / tireSpin) % 1;
+        this.backWheels.pitch = -(elapsedTime / tireSpin) % 1;
     
         // Render the scene
         this.scene.render(this.gl, this.shaderProgram);
