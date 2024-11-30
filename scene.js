@@ -4,7 +4,7 @@ class Scene {
         this.shaderProgram = shaderProgram;
 
         // Create LitMaterial instances
-        this.material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 1.0, 2.0, 4.0);
+        this.material = new LitMaterial(gl, 'texture/metal_scale.png', gl.LINEAR, 0.25, 0.5, 1.0, 2.0);
         this.material2 = new LitMaterial(gl, 'texture/concrete.png', gl.LINEAR, 0.1, 0.5, 0, 0.2);
 
         // Create base elements
@@ -14,44 +14,58 @@ class Scene {
         this.plane = this.scene.addChild(plane)
         this.plane.yaw = .125
         this.sunbind = this.scene.addChild(null)
+        
+        this.turbine = null
+        this.heliAnchor = null
+        this.topProp = null
+        this.backProp = null
+
         this.mainScene()
 
-        const { baseNode, turbineNode } = this.addTurbine();
         
-        this.turbine = turbineNode
-        this.plane.children.push(baseNode);
         
     }
 
     testScene() {
 
         
-        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
-        let cowNode = new Node()
-        cowNode.position = new Vec4(0, 3, 0, 1)
-        cowNode.scale = new Vec4(.5, .5, .5, .5)
-        cowNode.roll = -.25
         
         
-
-        let sun = new DirectionalLightNode( [1.0, 1.0, 1.0])
         
+        // lights
+        let sun = new DirectionalLightNode( [1.0, 1.0, -10.0])
         sun.position = new Vec4(0, 3, 5, 1)
-
         let pointLight = new PointLightNode( [1.0, 0.0, 0.0], 1.5)
         this.scene.children.push(pointLight);
-        const sphereNode = this.scene.addChild(sphere)
-        sphereNode.position = new Vec4(0, 1, 0, 1)
+        this.scene.children.push(sun);
 
-        NormalMesh.from_obj_file(gl, 'OBJs/turbine/base.obj', shaderProgram, this.material, (loadedMesh) => {
-            cowNode.data = loadedMesh
-        });
-        sphereNode.children.push(cowNode);
-        sphereNode.roll = .2;
-        sphereNode.children.push(sun);
+
+        // let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material);
+        // let cowNode = new Node()
+        // cowNode.position = new Vec4(0, 3, 0, 1)
+        // cowNode.scale = new Vec4(.5, .5, .5, .5)
+        // cowNode.roll = -.25
+
+
+        // const sphereNode = this.scene.addChild(sphere)
+        // sphereNode.position = new Vec4(0, 1, 0, 1)
+
+        // NormalMesh.from_obj_file(gl, 'OBJs/helicopter/helibody.obj', shaderProgram, this.material, (loadedMesh) => {
+        //     cowNode.data = loadedMesh
+        // });
+        // sphereNode.children.push(cowNode);
+        // sphereNode.roll = .2;
+        // sphereNode.children.push(sun);
+
+        let helibase = this.addHelicopter()
+
+        
+        this.scene.children.push(helibase);
 
 
     }
+
+    
 
     mainScene() {
 
@@ -82,11 +96,65 @@ class Scene {
 
 
         // galaxy perma light
-
         let galaxyLightNode = new DirectionalLightNode( [0.58, 0.54, 0.6])
         galaxyLightNode.position = new Vec4(1, 10, -30)
         this.scene.children.push(galaxyLightNode)
+
+        // add in turbine
+        const { baseNode, turbineNode } = this.addTurbine();
+        this.turbine = turbineNode
+        this.plane.children.push(baseNode);
+
+        // add in helicopter
+        let heliAnchor = new Node()
+        this.heliAnchor = heliAnchor;
+        let helibase = this.addHelicopter()
+        helibase.position = new Vec4(6,7,0,0)
+        helibase.scale = new Vec4(.2,.2,.2,0)
+        helibase.roll = -.03
+        helibase.pitch = -.04
+        helibase.yaw = -.03
+        heliAnchor.children.push(helibase);
+        this.scene.children.push(heliAnchor)
         
+    }
+
+    addHelicopter() {
+        let helibody = new Node();
+        let topProp = new Node();
+        let backProp = new Node();
+
+        // for aimation
+        this.topProp = topProp;
+        this.backProp = backProp;
+
+        //load meshes
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/helibody.obj', shaderProgram, this.material, (loadedMesh) => {
+            helibody.data = loadedMesh
+        });
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/top_prop.obj', shaderProgram, this.material, (loadedMesh) => {
+            topProp.data = loadedMesh
+        });
+        NormalMesh.from_obj_file(gl, 'OBJs/helicopter/back_prop.obj', shaderProgram, this.material, (loadedMesh) => {
+            backProp.data = loadedMesh
+        });
+        let sphere = NormalMesh.uv_sphere(gl, shaderProgram, 1, 16, this.material2);
+        let pointLight = new PointLightNode( [1.0, 0.0, 1.0], .7)
+
+
+        
+        const sphereNode = helibody.addChild(sphere)
+        helibody.children.push(topProp)
+        helibody.children.push(backProp)
+        sphereNode.children.push(pointLight);
+
+        // positioning
+        sphereNode.scale = new Vec4(.5,.5,.5,0)
+        sphereNode.position = new Vec4(0,1.8,4,0)
+        topProp.position = new Vec4(0,5.8,-.75,0)
+        backProp.position = new Vec4(0.55,3.45,-11.9,0)
+
+        return helibody;
     }
 
     addTurbine() {
@@ -153,10 +221,15 @@ class Scene {
         const elapsedTime = (currentTime - this.startTime) / 1000; // Convert ms to seconds
         const fullRotationTime = 100; // Time for one full rotation in seconds
         const turbineRotationTime = 20;
+        const propSpin = 1;
     
         // Calculate the roll value (modulus ensures it loops continuously)
         this.sunbind.roll = (elapsedTime / fullRotationTime) % 1;
         this.turbine.roll = (elapsedTime / turbineRotationTime) % 1;
+
+        this.topProp.yaw = (elapsedTime / propSpin) % 1;
+        this.backProp.pitch = (elapsedTime / propSpin) % 1;
+        this.heliAnchor.yaw = -(elapsedTime / turbineRotationTime) % 1;
     
         // Render the scene
         this.scene.render(this.gl, this.shaderProgram);

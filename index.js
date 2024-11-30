@@ -1,5 +1,3 @@
-
-
 let canvas = document.getElementById('glcanvas');
 let gl = canvas.getContext('webgl2');
 
@@ -227,6 +225,31 @@ const mat_shininess = 4.0;
 let scene = new Scene(gl, shaderProgram);
 const cubemap = new CubeMap(gl, skyboxProgram, 'cubemap');
 
+// Load camera position from local storage
+function loadCameraPosition() {
+    const savedPosition = localStorage.getItem('cameraPosition');
+    if (savedPosition) {
+        const { x, y, z, yaw, pitch, roll } = JSON.parse(savedPosition);
+        cam.pos = new Vec4(x, y, z, 0);
+        cam.yaw = yaw;
+        cam.pitch = pitch;
+        cam.roll = roll;
+    }
+}
+
+// Save camera position to local storage
+function saveCameraPosition() {
+    const cameraPosition = {
+        x: cam.pos.x,
+        y: cam.pos.y,
+        z: cam.pos.z,
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        roll: cam.roll
+    };
+    localStorage.setItem('cameraPosition', JSON.stringify(cameraPosition));
+}
+
 // rendering loop
 function render(currentTime) {
     previousTime = currentTime;
@@ -243,9 +266,11 @@ function render(currentTime) {
 
     // update the camera position each time
     set_uniform_vec3(gl, shaderProgram, 'cam_pos', [cam.pos.x, cam.pos.y, cam.pos.z]);
-    gl.depthFunc(gl.LEQUAL);
+
+    
     cubemap.render(projection, view);
-    gl.depthFunc(gl.LESS);
+    
+
     scene.render(currentTime);
 
     
@@ -330,6 +355,7 @@ document.getElementById('reset-camera').addEventListener('click', () => {
     cam.pitch = 0;
     cam.roll = 0;
     updateCameraInfo();
+    saveCameraPosition(); // Save the reset position
 });
 
 // update the sensitivity
@@ -344,6 +370,9 @@ function updateCameraInfo() {
     document.getElementById('camera-pitch').textContent = cam.pitch.toFixed(2);
     document.getElementById('camera-roll').textContent = cam.roll.toFixed(2);
 }
+
+// Load the camera position when the scene loads
+loadCameraPosition();
 
 // start animation
 requestAnimationFrame(render);
@@ -368,4 +397,7 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas(); // initial call to set the canvas size
+
+// Save the camera position periodically
+setInterval(saveCameraPosition, 1000);
 
