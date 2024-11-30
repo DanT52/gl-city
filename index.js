@@ -211,8 +211,8 @@ let ROTATE_PER_FRAME = ROTATE_SPEED / DESIRED_TICK_RATE;
 
 let keys = Keys.start_listening();
 
-let initialCamPosition = new Vec4(0, 5, -10, 0);
-let cam = new Camera(initialCamPosition, 0, 0, 0, );
+let initialCamPosition = new Vec4(4, 15, 24);
+let cam = new Camera(initialCamPosition, 0.57, -0.06, 0, );
 
 // Set material properties
 const mat_ambient = 0.25;
@@ -351,8 +351,8 @@ document.addEventListener('mousemove', (event) => {
 // reset the camera to initial state
 document.getElementById('reset-camera').addEventListener('click', () => {
     cam.pos = initialCamPosition;
-    cam.yaw = 0;
-    cam.pitch = 0;
+    cam.yaw = 0.55;
+    cam.pitch = -0.06;
     cam.roll = 0;
     updateCameraInfo();
     saveCameraPosition(); // Save the reset position
