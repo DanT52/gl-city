@@ -285,8 +285,8 @@ class Scene {
     
         // ensure yaw rotates in the shortest direction
         let deltaYaw = nextYaw - startYaw;
-        if (deltaYaw > 0.5) deltaYaw -= 1; // adjust for shortest rotation (clockwise)
-        if (deltaYaw < -0.5) deltaYaw += 1; // adjust for shortest rotation (counter-clockwise)
+        if (deltaYaw > 0.5) deltaYaw -= 1;
+        if (deltaYaw < -0.5) deltaYaw += 1;
     
         if (legElapsedTime >= legTime - turnTime) {
             // start turning during the last turnTime of the leg
@@ -297,6 +297,7 @@ class Scene {
             this.car.yaw = startYaw;
         }
 
+        // spin the wheels!
         this.frontWheels.pitch = -(elapsedTime / tireSpin) % 1;
         this.backWheels.pitch = -(elapsedTime / tireSpin) % 1;
     
