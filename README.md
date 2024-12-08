@@ -2,6 +2,8 @@
 
 GL-City is a 3D WebGL-based interactive scene featuring a procedurally generated city, animated elements such as a car, a helicopter, and a wind turbine, as well as lighting effects including a dynamic moon and galaxy light. The project demonstrates advanced WebGL techniques for rendering, animations, and scene management.
 
+![GL-City](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNWxzaWUwOTJjNzE3YjZtdGQ4Ym9sOTNiYzQ3bmE3MXJldm12am94ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/RelclhCPdaxvaB8vYw/giphy.gif)
+
 
 ## Features
 
